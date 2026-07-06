@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tailtrace"
+version = "0.1.0"
+description = "Controlled experiments for distributed training tail latency"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+train = ["torch==2.8.0", "numpy>=1.26"]
+ray = ["ray[train]==2.59.0", "torch==2.8.0", "numpy>=1.26"]
+spark = ["pyspark==4.0.1"]
+dev = ["pytest>=8", "ruff>=0.12"]
+
+[project.scripts]
+tailtrace = "tailtrace.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tailtrace = ["kernels/*.cpp", "kernels/*.cu"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["cuda: requires NVIDIA CUDA hardware and toolkit", "distributed: launches a real two-rank Gloo job", "ray: requires Ray Train", "spark: requires Spark and Java"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_*.py" = ["E402"]
