@@ -36,3 +36,58 @@ class TrainConfig:
     delay_rank: int = -1
     delay_ms: float = 0.0
 
+    def __post_init__(self):
+        for name in ("activation_checkpointing", "profile", "nvtx", "diagnostic_sync"):
+            if not isinstance(getattr(self, name), bool):
+                raise ValueError(f"{name} must be boolean")
+        for name in ("seed", "warmup", "checkpoint_every", "delay_rank"):
+            if isinstance(getattr(self, name), bool) or not isinstance(getattr(self, name), int):
+                raise ValueError(f"{name} must be an integer")
+        if not 0 <= self.seed < 2**31:
+            raise ValueError("seed must be in [0, 2**31)")
+        for name in ("lr", "delay_ms"):
+            if (
+                isinstance(getattr(self, name), bool)
+                or not isinstance(getattr(self, name), (int, float))
+                or not math.isfinite(getattr(self, name))
+            ):
+                raise ValueError(f"{name} must be a finite number")
+        for name in (
+            "samples",
+            "min_length",
+            "max_length",
+            "batch_size",
+            "steps",
+            "width",
+            "heads",
+            "layers",
+            "vocab_size",
+            "bucket_cap_mb",
+            "profile_steps",
+            "threads",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{name} must be a positive integer")
+        if self.min_length < 2 or self.max_length < self.min_length:
+            raise ValueError("require 2 <= min_length <= max_length")
+        if self.width % self.heads:
+            raise ValueError("width must be divisible by heads")
+        if not 0 <= self.warmup < self.steps or self.checkpoint_every < 0:
+            raise ValueError("require 0 <= warmup < steps and checkpoint_every >= 0")
+        if self.lr <= 0 or self.delay_ms < 0:
+            raise ValueError("lr must be positive and delay_ms nonnegative")
+        for field, choices in {
+            "strategy": {"single", "ddp", "fsdp2"},
+            "planner": {"random", "balanced"},
+            "kernel": {"reference", "cuda"},
+            "device": {"cpu", "cuda"},
+            "precision": {"fp32", "bf16"},
+        }.items():
+            if getattr(self, field) not in choices:
+                raise ValueError(f"{field} must be one of {sorted(choices)}")
+        if self.strategy == "fsdp2" and self.device != "cuda":
+            raise ValueError("FSDP2 requires CUDA in this project")
+        if self.kernel == "cuda" and self.device != "cuda":
+            raise ValueError("the CUDA kernel requires device=cuda")
+
