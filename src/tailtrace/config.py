@@ -91,3 +91,9 @@ class TrainConfig:
         if self.kernel == "cuda" and self.device != "cuda":
             raise ValueError("the CUDA kernel requires device=cuda")
 
+    @classmethod
+    def load(cls, path: str | Path):
+        return cls(**json.loads(Path(path).read_text()))
+
+    def to_dict(self):
+        return asdict(self)
