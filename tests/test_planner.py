@@ -23,3 +23,7 @@ def test_preserves_each_global_batch_and_token_denominator(world, batch):
     assert balanced == plan_epoch(lengths, world, batch, 7, "balanced")
 
 
+def test_padded_attention_not_sum_of_squared_lengths():
+    assert padded_cost([0, 1], [3, 9]) == 128
+
+
