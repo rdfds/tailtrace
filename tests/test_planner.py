@@ -27,3 +27,8 @@ def test_padded_attention_not_sum_of_squared_lengths():
     assert padded_cost([0, 1], [3, 9]) == 128
 
 
+def test_reject_bad_lengths():
+    with pytest.raises(ValueError):
+        plan_epoch([1, 3], 2, 1, 0)
+
+
