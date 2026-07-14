@@ -32,3 +32,9 @@ def test_reject_bad_lengths():
         plan_epoch([1, 3], 2, 1, 0)
 
 
+def test_variable_cardinality_can_reduce_proxy_tail():
+    lengths = [128, 16, 16, 16, 16, 16, 16, 16]
+    random = plan_epoch(lengths, 2, 4, 1, "random")[0]
+    balanced = plan_epoch(lengths, 2, 4, 1, "balanced")[0]
+    assert max(balanced.costs) < max(random.costs)
+    assert sorted(map(len, balanced.ranks)) == [1, 7]
