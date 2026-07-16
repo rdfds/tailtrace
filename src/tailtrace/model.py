@@ -43,3 +43,22 @@ class Block(nn.Module):
         )
 
 
+class CausalTransformer(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.embedding = nn.Embedding(config.vocab_size, config.width)
+        self.positions = nn.Embedding(config.max_length, config.width)
+        self.blocks = nn.ModuleList(
+            [Block(config.width, config.heads, config.kernel) for _ in range(config.layers)]
+        )
+        self.output = nn.Linear(config.width, config.vocab_size, bias=False)
+
+    def forward(self, tokens):
+        x = self.embedding(tokens) + self.positions(
+            torch.arange(tokens.shape[1], device=tokens.device)
+        )
+        for block in self.blocks:
+            x = block(x)
+        return self.output(x)
+
+
