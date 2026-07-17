@@ -76,3 +76,10 @@ def make_batch(ids, lengths, vocab_size, seed, device):
     return x.to(device, non_blocking=True), target.to(device, non_blocking=True)
 
 
+def token_loss(logits, target, global_tokens, world_size):
+    # DDP/FSDP average rank gradients. Undo that average before dividing by global tokens.
+    stable_logits = logits if logits.dtype == torch.float64 else logits.float()
+    local_sum = F.cross_entropy(
+        stable_logits.flatten(0, 1), target.flatten(), ignore_index=-100, reduction="sum"
+    )
+    return local_sum * (world_size / global_tokens), local_sum.detach()
