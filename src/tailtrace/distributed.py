@@ -37,3 +37,11 @@ def setup(config):
     return device, rank, world, owned
 
 
+def wrap_model(model, config, device, world):
+    if config.strategy == "fsdp2" or config.activation_checkpointing:
+        raise ValueError("this revision supports DDP without activation checkpointing")
+    if config.strategy == "ddp" and world > 1:
+        model = DistributedDataParallel(model,
+            device_ids=[device.index] if device.type == "cuda" else None,
+            bucket_cap_mb=config.bucket_cap_mb)
+    return model
