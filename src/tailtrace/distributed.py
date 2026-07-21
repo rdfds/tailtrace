@@ -38,10 +38,36 @@ def setup(config):
 
 
 def wrap_model(model, config, device, world):
-    if config.strategy == "fsdp2" or config.activation_checkpointing:
-        raise ValueError("this revision supports DDP without activation checkpointing")
-    if config.strategy == "ddp" and world > 1:
-        model = DistributedDataParallel(model,
+    if config.activation_checkpointing:
+        from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
+            apply_activation_checkpointing,
+            checkpoint_wrapper,
+        )
+
+        from tailtrace.model import Block
+
+        apply_activation_checkpointing(
+            model,
+            checkpoint_wrapper_fn=checkpoint_wrapper,
+            check_fn=lambda module: isinstance(module, Block),
+        )
+    if config.strategy == "fsdp2":
+        from torch.distributed.device_mesh import init_device_mesh
+        from torch.distributed.fsdp import MixedPrecisionPolicy, fully_shard
+
+        mesh = init_device_mesh("cuda", (world,))
+        kwargs = {"mesh": mesh}
+        if config.precision == "bf16":
+            kwargs["mp_policy"] = MixedPrecisionPolicy(
+                param_dtype=torch.bfloat16, reduce_dtype=torch.float32
+            )
+        for block in model.blocks:
+            fully_shard(block, **kwargs)
+        fully_shard(model, **kwargs)
+    elif config.strategy == "ddp" and world > 1:
+        model = DistributedDataParallel(
+            model,
             device_ids=[device.index] if device.type == "cuda" else None,
-            bucket_cap_mb=config.bucket_cap_mb)
+            bucket_cap_mb=config.bucket_cap_mb,
+        )
     return model
