@@ -201,3 +201,42 @@ def compare_runs(baselines: list[str], candidates: list[str], bootstrap: int = 4
     }
 
 
+def write_html(data: dict, path: str | Path):
+    """Offline report; no third-party scripts, CDNs, or trace data uploads."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    cards = []
+    for key in (
+        "evidence",
+        "timing",
+        "world_size",
+        "median_step_ms",
+        "p95_step_ms",
+        "tokens_per_second",
+        "geometric_mean_speedup",
+        "independent_pairs",
+        "interpretation",
+    ):
+        if key in data:
+            value = data[key]
+            cards.append(
+                f'<div class="card"><small>{html.escape(key.replace("_", " "))}</small><strong>{html.escape(f"{value:.3f}" if isinstance(value, float) else str(value))}</strong></div>'
+            )
+    rows = data.get("steps", data.get("pairs", []))
+    columns = list(rows[0]) if rows else []
+    table = "<tr>" + "".join(f"<th>{html.escape(k)}</th>" for k in columns) + "</tr>"
+    for row in rows:
+        table += "<tr>" + "".join(f"<td>{html.escape(str(row[k]))}</td>" for k in columns) + "</tr>"
+    limitations = "".join(f"<li>{html.escape(s)}</li>" for s in data.get("limitations", []))
+    path.write_text(f"""<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>TailTrace evidence report</title>
+<style>body{{margin:0;background:#101722;color:#e7edf5;font:16px system-ui;padding:48px;max-width:1200px;margin:auto}}
+h1{{font-size:42px;margin-bottom:8px}}p,small{{color:#aebed0}}.cards{{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0}}
+.card{{background:#1a2636;border:1px solid #314359;border-radius:12px;padding:20px;min-width:160px}}
+small,strong{{display:block}}strong{{font-size:24px;margin-top:10px}}table{{border-collapse:collapse;font-size:13px;width:100%}}
+th,td{{text-align:left;border-bottom:1px solid #314359;padding:10px}}.scroll{{overflow:auto}}li{{margin:10px 0}}
+pre{{background:#1a2636;padding:20px;overflow:auto}}@media(max-width:600px){{body{{padding:20px}}}}</style>
+<h1>TailTrace</h1><p>Evidence for distributed training tail latency · schema 1</p>
+<div class="cards">{"".join(cards)}</div><h2>Measurement limits</h2><ul>{limitations}</ul>
+<h2>Evidence rows</h2><div class="scroll"><table>{table}</table></div>
+<details><summary>Full reproducible payload</summary><pre>{html.escape(json.dumps(data, indent=2))}</pre></details></html>""")
