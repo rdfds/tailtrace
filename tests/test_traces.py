@@ -43,3 +43,18 @@ def test_stream_overlap_not_double_counted(tmp_path):
     assert row["uncovered_ms"] == 2
 
 
+def test_reject_multiple_devices(tmp_path):
+    p = tmp_path / "trace.json"
+    p.write_text(
+        json.dumps(
+            {
+                "traceEvents": [
+                    event("tailtrace/step/0", 0, 10),
+                    event("gemm", 0, 5, device=0),
+                    event("gemm", 0, 5, device=1),
+                ]
+            }
+        )
+    )
+    with pytest.raises(ValueError, match="multi-device"):
+        analyze_trace(p)
