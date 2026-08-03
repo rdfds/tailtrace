@@ -24,3 +24,22 @@ def event(name, start, dur, cat="kernel", device=0):
     }
 
 
+def test_stream_overlap_not_double_counted(tmp_path):
+    events = [
+        event("tailtrace/step/0", 0, 10000, "user_annotation"),
+        event("gemm", 0, 6000),
+        event("gemm2", 2000, 3000),
+        event("ncclAllReduce", 4000, 4000),
+        event("cudaLaunchKernel", 0, 10000, "cuda_runtime"),
+    ]
+    p = tmp_path / "trace.json"
+    p.write_text(json.dumps({"traceEvents": events}))
+    row = analyze_trace(p)["steps"][0]
+    assert row["compute_ms"] == 6
+    assert row["collective_ms"] == 4
+    assert row["overlap_ms"] == 2
+    assert row["exposed_collective_ms"] == 2
+    assert row["gpu_busy_ms"] == 8
+    assert row["uncovered_ms"] == 2
+
+
