@@ -54,3 +54,19 @@ def test_summary_and_seed_bootstrap(tmp_path):
     assert report["seed_bootstrap_95_ci"] == [2, 2]
 
 
+def test_comparison_rejects_synthetic_or_uncontrolled(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    fixture_run(a, 1, "random")
+    manifest = fixture_run(b, 1, "balanced")
+    modified = deepcopy(manifest)
+    modified["evidence"] = "synthetic"
+    atomic_json(b / "manifest.json", modified)
+    with pytest.raises(ValueError, match="observed"):
+        compare_runs([str(a)], [str(b)])
+    modified = deepcopy(manifest)
+    modified["config"]["seed"] = 2
+    atomic_json(b / "manifest.json", modified)
+    with pytest.raises(ValueError, match="uncontrolled"):
+        compare_runs([str(a)], [str(b)])
+
+
