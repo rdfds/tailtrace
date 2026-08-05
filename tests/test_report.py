@@ -70,3 +70,14 @@ def test_comparison_rejects_synthetic_or_uncontrolled(tmp_path):
         compare_runs([str(a)], [str(b)])
 
 
+def test_missing_rank_and_duplicate_rows_rejected(tmp_path):
+    fixture_run(tmp_path, 0, "balanced")
+    path = tmp_path / "metrics-rank1.jsonl"
+    path.write_text(path.read_text() + path.read_text().splitlines()[0] + "\n")
+    with pytest.raises(ValueError, match="duplicate"):
+        summarize_run(tmp_path)
+    path.unlink()
+    with pytest.raises(ValueError, match="rank files"):
+        summarize_run(tmp_path)
+
+
