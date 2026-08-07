@@ -81,3 +81,13 @@ def test_missing_rank_and_duplicate_rows_rejected(tmp_path):
         summarize_run(tmp_path)
 
 
+def test_one_pair_has_no_confidence_interval_and_html_is_escaped(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    fixture_run(a, 1, "random")
+    fixture_run(b, 1, "balanced", 8)
+    result = compare_runs([str(a)], [str(b)])
+    assert result["seed_bootstrap_95_ci"] is None
+    result["limitations"] = ["<script>alert(1)</script>"]
+    path = tmp_path / "report.html"
+    write_html(result, path)
+    assert "<script>" not in path.read_text()
