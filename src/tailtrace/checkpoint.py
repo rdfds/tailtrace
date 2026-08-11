@@ -28,3 +28,31 @@ def save(path, model, optimizer, config, world, step, rank):
         dist.barrier()
 
 
+def restore(path, model, optimizer, config, world):
+    path = Path(path)
+    if not (path / "complete.json").exists():
+        raise ValueError("checkpoint has no complete.json commit marker")
+    metadata = json.loads((path / "complete.json").read_text())
+    if metadata["world_size"] != world:
+        raise ValueError("checkpoint recovery currently requires the same world size")
+    mutable = {
+        "steps",
+        "warmup",
+        "profile",
+        "nvtx",
+        "profile_steps",
+        "checkpoint_every",
+        "diagnostic_sync",
+    }
+    for key, value in metadata["config"].items():
+        if key not in mutable and config.to_dict().get(key) != value:
+            raise ValueError(f"checkpoint configuration changed: {key}")
+    model_state, optim_state = get_state_dict(model, optimizer)
+    state = {"model": model_state, "optimizer": optim_state}
+    dcp.load(state, checkpoint_id=path)
+    set_state_dict(
+        model, optimizer, model_state_dict=state["model"], optim_state_dict=state["optimizer"]
+    )
+    # The model has no stochastic layers. Data and epoch permutations are sample-ID seeded;
+    # resuming a global step exactly restores the next batch without RNG state snapshots.
+    return metadata["step"]
