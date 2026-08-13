@@ -32,3 +32,6 @@ def test_restore_optimizer_and_next_update(tmp_path):
         torch.testing.assert_close(a, b, rtol=0, atol=0)
 
 
+def test_incomplete_checkpoint_rejected(tmp_path):
+    with pytest.raises(ValueError, match="commit marker"):
+        restore(tmp_path, None, None, TrainConfig(), 1)
