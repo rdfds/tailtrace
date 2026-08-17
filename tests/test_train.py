@@ -36,3 +36,23 @@ def test_resume_mid_epoch_matches_uninterrupted_weights(tmp_path):
         run(config, tmp_path / "full")
 
 
+def test_profiler_emits_readable_rank_trace(tmp_path):
+    from tailtrace.traces import analyze_trace
+
+    config = TrainConfig(
+        samples=16,
+        batch_size=2,
+        steps=5,
+        warmup=1,
+        min_length=2,
+        max_length=8,
+        width=16,
+        heads=2,
+        layers=1,
+        profile=True,
+        profile_steps=2,
+    )
+    run(config, tmp_path)
+    trace = analyze_trace(tmp_path / "trace-rank0.json")
+    assert trace["gpu_events"] == 0
+    assert len(trace["steps"]) == 2
