@@ -35,6 +35,24 @@ __global__ void forward_kernel(const T* x, const T* r, const T* w, T* y, float* 
   }
 }
 
+template <typename T>
+__global__ void dx_kernel(const T* dy, const T* x, const T* r, const T* w,
+                          const float* inv, T* dx, int width) {
+  const int row = blockIdx.x;
+  const int64_t base = int64_t(row) * width;
+  float dot = 0;
+  for (int col = threadIdx.x; col < width; col += THREADS) {
+    float z = float(x[base + col]) + float(r[base + col]);
+    dot += float(dy[base + col]) * float(w[col]) * z;
+  }
+  float scale = inv[row];
+  float correction = block_sum(dot) * scale * scale / width;
+  for (int col = threadIdx.x; col < width; col += THREADS) {
+    float z = float(x[base + col]) + float(r[base + col]);
+    dx[base + col] = T(scale * (float(dy[base + col]) * float(w[col]) - z * correction));
+  }
+}
+
 std::vector<torch::Tensor> rms_forward_cuda(torch::Tensor x, torch::Tensor r,
                                          torch::Tensor w, double eps) {
   c10::cuda::CUDAGuard guard(x.device());
