@@ -53,6 +53,23 @@ __global__ void dx_kernel(const T* dy, const T* x, const T* r, const T* w,
   }
 }
 
+// Two-pass deterministic weight reduction avoids rows*width temporary storage and
+// floating-point atomic contention. A tile contains up to 256 rows.
+template <typename T>
+__global__ void dw_partial_kernel(const T* dy, const T* x, const T* r, const float* inv,
+                                 float* partial, int rows, int width) {
+  const int col = blockIdx.x * THREADS + threadIdx.x;
+  const int tile = blockIdx.y;
+  if (col >= width) return;
+  float sum = 0;
+  int end = min(rows, (tile + 1) * 256);
+  for (int row = tile * 256; row < end; ++row) {
+    int64_t i = int64_t(row) * width + col;
+    sum += float(dy[i]) * (float(x[i]) + float(r[i])) * inv[row];
+  }
+  partial[int64_t(tile) * width + col] = sum;
+}
+
 std::vector<torch::Tensor> rms_forward_cuda(torch::Tensor x, torch::Tensor r,
                                          torch::Tensor w, double eps) {
   c10::cuda::CUDAGuard guard(x.device());
