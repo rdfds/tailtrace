@@ -70,6 +70,15 @@ __global__ void dw_partial_kernel(const T* dy, const T* x, const T* r, const flo
   partial[int64_t(tile) * width + col] = sum;
 }
 
+template <typename T>
+__global__ void dw_finalize_kernel(const float* partial, T* dw, int tiles, int width) {
+  const int col = blockIdx.x * THREADS + threadIdx.x;
+  if (col >= width) return;
+  float sum = 0;
+  for (int tile = 0; tile < tiles; ++tile) sum += partial[int64_t(tile) * width + col];
+  dw[col] = T(sum);
+}
+
 std::vector<torch::Tensor> rms_forward_cuda(torch::Tensor x, torch::Tensor r,
                                          torch::Tensor w, double eps) {
   c10::cuda::CUDAGuard guard(x.device());
