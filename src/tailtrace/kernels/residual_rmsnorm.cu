@@ -94,3 +94,24 @@ std::vector<torch::Tensor> rms_forward_cuda(torch::Tensor x, torch::Tensor r,
   return {y, inv};
 }
 
+std::vector<torch::Tensor> rms_backward_cuda(torch::Tensor dy, torch::Tensor x,
+                                          torch::Tensor r, torch::Tensor w, torch::Tensor inv) {
+  c10::cuda::CUDAGuard guard(x.device());
+  int width = x.size(-1), rows = x.numel() / width;
+  TORCH_CHECK(rows <= 256 * 65535, "backward row limit exceeded (2D grid)");
+  int tiles = (rows + 255) / 256;
+  auto dx = torch::empty_like(x), dw = torch::empty_like(w);
+  auto partial = torch::empty({tiles, width}, x.options().dtype(torch::kFloat32));
+  auto stream = at::cuda::getCurrentCUDAStream();
+  AT_DISPATCH_FLOATING_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16, x.scalar_type(), "tailtrace_rms_backward", [&] {
+    dx_kernel<scalar_t><<<rows, THREADS, 0, stream>>>(dy.data_ptr<scalar_t>(), x.data_ptr<scalar_t>(),
+        r.data_ptr<scalar_t>(), w.data_ptr<scalar_t>(), inv.data_ptr<float>(), dx.data_ptr<scalar_t>(), width);
+    dw_partial_kernel<scalar_t><<<dim3((width + 255) / 256, tiles), THREADS, 0, stream>>>(
+        dy.data_ptr<scalar_t>(), x.data_ptr<scalar_t>(), r.data_ptr<scalar_t>(), inv.data_ptr<float>(),
+        partial.data_ptr<float>(), rows, width);
+    dw_finalize_kernel<scalar_t><<<(width + 255) / 256, THREADS, 0, stream>>>(
+        partial.data_ptr<float>(), dw.data_ptr<scalar_t>(), tiles, width);
+  });
+  C10_CUDA_KERNEL_LAUNCH_CHECK();
+  return {dx, dw};
+}

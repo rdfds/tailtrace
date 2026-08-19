@@ -25,6 +25,17 @@ std::vector<torch::Tensor> forward(torch::Tensor x, torch::Tensor r, torch::Tens
   return rms_forward_cuda(x, r, w, eps);
 }
 
+std::vector<torch::Tensor> backward(torch::Tensor dy, torch::Tensor x, torch::Tensor r,
+                                  torch::Tensor w, torch::Tensor inv) {
+  validate(x, r, w);
+  TORCH_CHECK(dy.is_cuda() && dy.device() == x.device() && dy.sizes() == x.sizes() &&
+              dy.scalar_type() == x.scalar_type() && dy.is_contiguous(), "invalid output gradient");
+  TORCH_CHECK(inv.is_cuda() && inv.device() == x.device() && inv.scalar_type() == at::kFloat &&
+              inv.is_contiguous() && inv.numel() == x.numel() / x.size(-1), "invalid inverse RMS");
+  return rms_backward_cuda(dy, x, r, w, inv);
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("forward", &forward);
+  m.def("backward", &backward);
 }
