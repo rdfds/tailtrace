@@ -27,3 +27,16 @@ def test_forward_and_all_gradients(shape, dtype):
         torch.testing.assert_close(a, b, rtol=tol, atol=tol)
 
 
+def test_nondefault_stream_and_noncontiguous_input():
+    stream = torch.cuda.Stream()
+    with torch.cuda.stream(stream):
+        x = torch.randn(17, 5, device="cuda").t().requires_grad_()
+        r = torch.randn_like(x).requires_grad_()
+        w = torch.ones(17, device="cuda", requires_grad=True)
+        result = fused_residual_rmsnorm(x, r, w)
+        ref = residual_rmsnorm(x, r, w)
+        result.sum().backward()
+    stream.synchronize()
+    torch.testing.assert_close(result, ref)
+
+
