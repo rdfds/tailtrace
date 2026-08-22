@@ -40,3 +40,7 @@ def test_nondefault_stream_and_noncontiguous_input():
     torch.testing.assert_close(result, ref)
 
 
+def test_reject_dtype_mismatch():
+    x = torch.randn(3, 8, device="cuda")
+    with pytest.raises(RuntimeError, match="dtype mismatch"):
+        fused_residual_rmsnorm(x, x.half(), torch.ones(8, device="cuda"))
