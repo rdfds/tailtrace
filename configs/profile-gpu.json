@@ -1,0 +1,15 @@
+{
+  "device": "cuda",
+  "strategy": "ddp",
+  "planner": "balanced",
+  "steps": 12,
+  "warmup": 3,
+  "width": 128,
+  "heads": 4,
+  "layers": 4,
+  "max_length": 256,
+  "profile": true,
+  "profile_steps": 3,
+  "nvtx": true,
+  "diagnostic_sync": true
+}
