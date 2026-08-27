@@ -43,3 +43,38 @@ def step_aggregates(df):
     )
 
 
+def aggregate(source: str, out: str):
+    from pyspark.sql import SparkSession
+    from pyspark.sql.types import BooleanType, DoubleType, LongType, StructField, StructType
+
+    # An explicit schema prevents inference drift between small CPU and large GPU runs.
+    schema = StructType(
+        [
+            StructField(name, kind(), False)
+            for name, kind in [
+                ("rank", LongType),
+                ("step", LongType),
+                ("warmup", BooleanType),
+                ("local_tokens", LongType),
+                ("global_tokens", LongType),
+                ("padded_tokens", LongType),
+                ("step_ms", DoubleType),
+                ("loss_sum", DoubleType),
+                ("peak_memory_bytes", LongType),
+            ]
+        ]
+    )
+    spark = SparkSession.builder.appName("TailTrace experiment warehouse").getOrCreate()
+    try:
+        df = spark.read.schema(schema).option("mode", "FAILFAST").json(source)
+        required = [name for name in schema.fieldNames()]
+        from functools import reduce
+
+        from pyspark.sql import functions as F
+
+        invalid = df.filter(reduce(lambda a, b: a | b, (F.col(k).isNull() for k in required)))
+        if invalid.limit(1).count():
+            raise ValueError("missing required metric fields")
+        step_aggregates(df).write.mode("errorifexists").partitionBy("run").parquet(out)
+    finally:
+        spark.stop()
