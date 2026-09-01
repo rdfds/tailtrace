@@ -42,3 +42,9 @@ def test_nsight_adapter_units_process_and_registered_strings(tmp_path):
     assert source.read_bytes() == before
 
 
+def test_explicit_process_selection(tmp_path):
+    source, target = tmp_path / "source.sqlite", tmp_path / "trace.json"
+    make_db(source, extra_process=True)
+    with pytest.raises(ValueError, match="multiple processes"):
+        import_sqlite(str(source), str(target))
+    import_sqlite(str(source), str(target), 7 << 24)
