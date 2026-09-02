@@ -1,0 +1,14 @@
+{
+  "device": "cpu",
+  "strategy": "ddp",
+  "planner": "random",
+  "samples": 128,
+  "steps": 20,
+  "warmup": 4,
+  "min_length": 8,
+  "max_length": 64,
+  "width": 32,
+  "heads": 4,
+  "layers": 2,
+  "batch_size": 4
+}
