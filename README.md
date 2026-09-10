@@ -25,3 +25,27 @@ trace occupancy → paired intervention report. Long NCCL duration alone does no
 a network bottleneck; another rank may have arrived late. Cross-host clocks are never
 assumed synchronized.
 
+## Run it
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e '.[train,dev]'
+pytest -m 'not cuda and not ray and not spark'
+tailtrace demo --out runs/demo
+torchrun --nnodes=1 --nproc-per-node=2 --master-addr=127.0.0.1 --master-port=29500 \
+  -m tailtrace train --config configs/cpu.json --out runs/ddp-cpu
+tailtrace experiment --config configs/cpu-baseline.json \
+  --intervention configs/interventions/balance.json \
+  --seeds 17 23 31 --workers 2 --out runs/balance
+```
+
+Open `runs/balance/report.html` to inspect paired latency ratios and the seed bootstrap
+interval. Each run includes raw rank metrics, config, hardware/software metadata, a
+source fingerprint, and a summary. The driver records failures and refuses uncontrolled
+comparisons. Use a new output directory for each run.
+
+The offline demo needs only `pip install -e .` and labels its events **synthetic**.
+Training requires the `train` extra. Ray and Spark are optional dependencies; importing
+the offline tools does not load any of these runtimes.
+
