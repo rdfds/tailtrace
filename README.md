@@ -49,3 +49,16 @@ The offline demo needs only `pip install -e .` and labels its events **synthetic
 Training requires the `train` extra. Ray and Spark are optional dependencies; importing
 the offline tools does not load any of these runtimes.
 
+## What is implemented
+
+| Area | Implementation |
+|---|---|
+| Workload intervention | Deterministic minimax proxy planner with unequal local batch sizes, global sample conservation, and bounded cardinality |
+| Distributed training | Causal transformer, token-weighted loss, DDP/FSDP2, bf16, activation checkpointing, torchrun/Slurm launch |
+| CUDA | C++/CUDA residual-RMSNorm forward/backward, fp32 accumulation, deterministic two-pass weight reduction, current-stream support |
+| Recovery | Distributed model/optimizer checkpoints, atomic completion markers, deterministic mid-epoch resume |
+| Profiling | Kineto, NVTX, Nsight SQLite adapter, interval unions, exposed collective occupancy and copy/compute overlap |
+| Experiments | Randomized paired arms, protocol/hardware/source guards, bootstrap across independent seeds, offline HTML reports |
+| Cluster orchestration | Ray Train reuses the same loop and global planner; local object store is bounded |
+| Experiment warehouse | Spark validates rank coverage and aggregates separate runs into Parquet |
+
