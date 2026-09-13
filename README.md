@@ -62,3 +62,28 @@ the offline tools does not load any of these runtimes.
 | Cluster orchestration | Ray Train reuses the same loop and global planner; local object store is bounded |
 | Experiment warehouse | Spark validates rank coverage and aggregates separate runs into Parquet |
 
+## Evidence, not promises
+
+The CPU correctness suite passes, including an actual two-rank Gloo job and exact
+checkpoint recovery. The actual two-worker Ray Train CPU test also passes, including
+the interpreter path with spaces. The [CPU smoke observation](results/cpu-laptop/README.md) is
+inconclusive: this workload does **not** establish a performance advantage. No GPU
+speedup, scaling efficiency, cost saving, or research priority is claimed.
+
+CUDA/FSDP2 and multi-node execution need NVIDIA validation. Spark's local installation
+was blocked by disk space; its test is supplied in a separate Java 17 CI job. CI has
+not been executed remotely. Ray's validation status and launch notes are documented
+in [validation](docs/validation.md).
+
+```bash
+# NVIDIA machine, after correctness tests pass:
+torchrun --standalone --nproc-per-node=2 -m tailtrace train \
+  --config configs/gpu-ddp.json --out runs/gpu
+tailtrace kernel-bench --rows 4096 --width 1024 --out runs/kernel.json
+```
+
+The [manual GPU workflow](.github/workflows/gpu.yml) runs kernel checks and compares
+DDP/FSDP2 gradients and SGD updates against the global objective on two GPUs. The
+[research roadmap](docs/research-roadmap.md) identifies experiments and limitations
+that would turn the current lab into a stronger research contribution.
+
