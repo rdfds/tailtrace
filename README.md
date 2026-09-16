@@ -87,3 +87,12 @@ DDP/FSDP2 gradients and SGD updates against the global objective on two GPUs. Th
 [research roadmap](docs/research-roadmap.md) identifies experiments and limitations
 that would turn the current lab into a stronger research contribution.
 
+## Profiling a claim
+
+The [profiling protocol](docs/validation.md#serious-profiling-protocol) separates
+uninstrumented throughput from diagnostic traces and Nsight Compute counters.
+`tailtrace analyze` reads a rank-local Chrome trace; `tailtrace nsys-import` converts
+a read-only Nsight SQLite export. GPU stream overlap is counted once. NCCL waiting
+is not assumed to be network transfer time. Cross-host arrival times are not compared
+without clock alignment.
+
