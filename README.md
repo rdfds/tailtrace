@@ -96,3 +96,13 @@ a read-only Nsight SQLite export. GPU stream overlap is counted once. NCCL waiti
 is not assumed to be network transfer time. Cross-host arrival times are not compared
 without clock alignment.
 
+## Prior art and scope
+
+[Holistic Trace Analysis](https://github.com/facebookresearch/HolisticTraceAnalysis) already
+provides distributed trace analysis. [FSDP2](https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html)
+and [Ray Train](https://docs.ray.io/en/latest/train/overview.html) provide sharding and
+orchestration. TailTrace's proposed contribution is their integration with a constrained
+workload intervention and correctness/evidence gates, not inventing these systems.
+Research novelty is a hypothesis requiring broader review and real experiments.
+
+MIT licensed. See [architecture](docs/architecture.md) and [validation](docs/validation.md).
