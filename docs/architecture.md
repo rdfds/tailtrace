@@ -37,3 +37,22 @@ launch overhead complicate the relationship between this proxy and wall time. Th
 planner is homogeneous: it does not currently calibrate different GPU speeds. Its
 sample-count bound does not prove a model will fit in GPU memory.
 
+## Objective preservation
+
+Let `Sᵣ` be the sum of valid-token cross-entropies on rank `r`, `W` the world size,
+and `T` the valid-token count across the **global** batch. Each rank backpropagates
+`Lᵣ = W × Sᵣ / T`. DDP/FSDP average gradients:
+
+`(1/W) × Σᵣ ∇Lᵣ = ∇(Σᵣ Sᵣ / T)`.
+
+The denominator is known from the deterministic plan, so no normalization all-reduce
+is needed per step. Averaging local mean losses would be wrong for unequal local
+token counts. Right padding and causal attention ensure valid queries cannot attend
+to future padding. Padded labels are ignored. The model has no dropout or batch
+normalization, whose randomness/statistics would complicate equivalence.
+
+Mathematical equivalence does not imply bitwise fp32 equivalence. Batch shapes change
+floating-point reduction order, and AdamW can amplify errors near zero. Tests cover
+fp32 gradients and real two-rank fp64 AdamW updates. The manual GPU gate covers fp32
+SGD gradients/updates for both distributed strategies and both norm implementations.
+
