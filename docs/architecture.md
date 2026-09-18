@@ -56,3 +56,21 @@ floating-point reduction order, and AdamW can amplify errors near zero. Tests co
 fp32 gradients and real two-rank fp64 AdamW updates. The manual GPU gate covers fp32
 SGD gradients/updates for both distributed strategies and both norm implementations.
 
+## Distributed execution and recovery
+
+`torchrun` owns rank/device setup and NCCL/Gloo process groups. Ray Train supplies an
+already initialized process group; the same training loop reuses it. FSDP2 shards each
+transformer block and then the root, before constructing the optimizer. Activation
+checkpointing can be enabled as an explicit intervention.
+
+Distributed Checkpoint stores canonical model and optimizer state. `complete.json` is
+written after all shard writes finish; incomplete directories cannot be resumed.
+Recovery requires the same world size and workload/model settings. It restores the
+global step and recomputes epoch permutations. Synthetic tokens are sample-ID seeded,
+so the model's deterministic execution needs no mutable dataset cursor or dropout RNG.
+Elastic world-size recovery and automatic failure retries are outside the current scope.
+
+Rank zero collects JSONL metrics and hardware metadata. A shared filesystem is required
+for multi-node checkpoints and trace files. Metrics/timers are buffered for a bounded
+experiment and collected at the end; this is not a streaming production trainer.
+
