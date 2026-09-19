@@ -74,3 +74,24 @@ Rank zero collects JSONL metrics and hardware metadata. A shared filesystem is r
 for multi-node checkpoints and trace files. Metrics/timers are buffered for a bounded
 experiment and collected at the end; this is not a streaming production trainer.
 
+## CUDA residual RMSNorm
+
+For each row, `z = x + residual`, `s = rsqrt(mean(z²) + epsilon)`, `y = z × s × weight`.
+The backward equations for upstream gradient `g` are:
+
+`dx = dresidual = s × (g × weight − z × s² × mean(g × weight × z))`
+
+`dweightⱼ = Σrows(gⱼ × zⱼ × s)`.
+
+The CUDA implementation uses a strided 256-thread row block with fp32 reduction.
+Weight gradients use per-256-row partial sums followed by a deterministic reduction,
+avoiding global atomics. Scratch storage is `ceil(rows/256) × width × 4` bytes.
+The implementation handles widths not divisible by the block size, matches the active
+PyTorch CUDA stream, and validates shapes, devices, and dtypes at the C++ boundary.
+
+Supported: matching CUDA fp32/fp16/bf16 inputs, arbitrary leading dimensions, width up
+to 65,536, first-order autograd. Unsupported: broadcasting, higher-order gradients,
+vmap, torch.compile integration, CUDA Graph capture during JIT compilation. Inputs are
+made contiguous by the Python wrapper. This is a correctness-first fused kernel; no
+performance superiority has been demonstrated.
+
