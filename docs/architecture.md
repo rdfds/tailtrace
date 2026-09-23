@@ -95,3 +95,26 @@ vmap, torch.compile integration, CUDA Graph capture during JIT compilation. Inpu
 made contiguous by the Python wrapper. This is a correctness-first fused kernel; no
 performance superiority has been demonstrated.
 
+## Timing and trace semantics
+
+CPU timing uses wall duration. CUDA step timing uses events on the active stream,
+including GPU idle gaps from host scheduling; events are read after one final sync.
+There is no `.item()` or diagnostic synchronization in the default training loop.
+Peak allocated memory is cumulative over the run. Summary step time is the **maximum
+rank-local duration**, which avoids requiring synchronized clocks but is not an exact
+cross-host global critical path. Throughput excludes warmup, planner work between steps,
+checkpoint I/O, and final reporting; `training_loop_wall_ms` includes work in the loop.
+
+Trace analysis unions compute, NCCL, and copy intervals within each rank's step range.
+`exposed_collective = NCCL union − intersection(NCCL union, compute union)`.
+Multiple streams cannot inflate occupancy beyond the window. CUDA API CPU ranges do
+not count as device work. Name-based NCCL classification can miss other communication
+implementations. NCCL occupancy includes waiting for peers. Uncovered time is not
+measured SM utilization or proof of an input bottleneck.
+
+Async work can spill outside host step ranges. `diagnostic_sync=true` gives cleaner
+step attribution but changes execution. Use separate uninstrumented throughput runs.
+The Nsight adapter reads CUPTI/NVTX SQLite exports in read-only mode, converts nanoseconds
+to Chrome microseconds, resolves registered NVTX strings, and requires an explicit
+process/device selection for ambiguous multi-process/device captures.
+
