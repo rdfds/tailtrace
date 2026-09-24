@@ -118,3 +118,16 @@ The Nsight adapter reads CUPTI/NVTX SQLite exports in read-only mode, converts n
 to Chrome microseconds, resolves registered NVTX strings, and requires an explicit
 process/device selection for ambiguous multi-process/device captures.
 
+## Experiment evidence
+
+Comparisons require equal workloads, seeds, world size, timing method, rank placement,
+software, instrumentation, and (when available) source SHA-256. Explicit intervention
+keys are planner, kernel, bucket size, checkpointing, strategy, and precision. All seed
+pairs must use the same before/after settings. Changed model dimensions invalidate a
+paired comparison. Multiple changed settings estimate their joint effect.
+
+Reported speedup is the geometric mean of per-seed median-step ratios. The bootstrap
+resamples **seeds**, not correlated steps; fewer than three pairs yields no interval.
+Three seeds is a smoke protocol, not sufficient research evidence. Use at least five
+to ten pairs with randomized alternating order, and inspect distributions and outliers.
+GPU utilization, energy, money saved, and cross-host clock alignment are not inferred.
