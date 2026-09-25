@@ -17,3 +17,16 @@
 CI workflows are configuration, not evidence of a successful remote CI run. No remote
 repository is configured in the initial workspace.
 
+## Run the local correctness suite
+
+```bash
+pip install -e '.[train,dev]'
+ruff check src tests
+ruff format --check src tests
+pytest -m 'not cuda and not ray and not spark'
+```
+
+`tests/test_distributed.py` launches actual processes through torchrun. CPU runs on
+macOS use explicit IPv4 master addressing; PyTorch's `--standalone` hostname discovery
+can produce an unresolvable reverse-DNS name on some machines.
+
