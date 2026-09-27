@@ -51,3 +51,27 @@ tailtrace compare --baseline runs/base-17 runs/base-23 runs/base-31 \
 The checked-in [CPU smoke observation](../results/cpu-laptop/README.md) shows an
 inconclusive result. It is not a CUDA performance result or a published research finding.
 
+## CUDA correctness first
+
+Use Linux, NVIDIA GPUs, PyTorch 2.8.0 with a compatible CUDA build, nvcc, and a C++ compiler.
+Install `ninja` for JIT compilation. The CUDA toolkit must match the PyTorch build;
+installation of this project does not install a toolkit or drivers.
+
+```bash
+pip install -e '.[train,dev]' ninja
+pytest tests/test_cuda.py -m cuda
+torchrun --standalone --nproc-per-node=2 tests/gpu_equivalence_worker.py runs/gpu-equivalence.json
+tailtrace kernel-bench --rows 4096 --width 1024 --dtype float32 --out runs/kernel-fp32.json
+tailtrace kernel-bench --rows 4096 --width 1024 --dtype bfloat16 --out runs/kernel-bf16.json
+```
+
+Run irregular widths, multiple leading dimensions, fp16/bf16/fp32, and non-default CUDA
+streams. Run NVIDIA Compute Sanitizer on the kernel tests to detect invalid memory
+access and race conditions. The manual GitHub workflow targets a self-hosted two-GPU
+runner; hosted CPU runners cannot validate CUDA.
+
+`kernel-bench` checks outputs and all first-order gradients before reporting timings.
+It excludes compilation and warmup and reports forward and forward+backward distributions.
+Its reference is eager PyTorch, not compiled PyTorch or every existing fused library.
+Winning this microbenchmark is not sufficient to claim a training improvement.
+
