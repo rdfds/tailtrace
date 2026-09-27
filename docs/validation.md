@@ -30,3 +30,24 @@ pytest -m 'not cuda and not ray and not spark'
 macOS use explicit IPv4 master addressing; PyTorch's `--standalone` hostname discovery
 can produce an unresolvable reverse-DNS name on some machines.
 
+## Run a controlled experiment
+
+```bash
+tailtrace experiment --config configs/cpu-baseline.json \
+  --intervention configs/interventions/balance.json \
+  --seeds 17 23 31 --workers 2 --out runs/balance-cpu
+```
+
+The driver randomizes arm order within each seed, stores commands' output in logs,
+records failure state, validates paired manifests, and writes JSON plus an offline
+HTML report. It runs locally without cloud provisioning. For multi-node comparisons,
+launch each arm with the same cluster placement and then use `tailtrace compare`.
+
+```bash
+tailtrace compare --baseline runs/base-17 runs/base-23 runs/base-31 \
+  --candidate runs/test-17 runs/test-23 runs/test-31 --out runs/comparison.json
+```
+
+The checked-in [CPU smoke observation](../results/cpu-laptop/README.md) shows an
+inconclusive result. It is not a CUDA performance result or a published research finding.
+
