@@ -108,3 +108,43 @@ the default batch-size setting instead scales global sample count with world siz
 Report which scaling regime you use, links/topology, GPU model/count, precision, and
 the exact source/config hashes.
 
+## Serious profiling protocol
+
+1. Establish correctness and an uninstrumented multi-seed throughput baseline.
+2. Collect separate short Kineto/Nsight traces with `configs/profile-gpu.json`.
+3. Attribute local compute/communication overlap; inspect delayed-rank injection by
+   setting `delay_rank` and `delay_ms`. Delay injection is diagnostic, not a benchmark.
+4. Test one intervention and rerun uninstrumented paired experiments.
+5. Inspect memory, numerical differences, confidence intervals, and negative results.
+
+```bash
+torchrun --standalone --nproc-per-node=2 -m tailtrace train \
+  --config configs/profile-gpu.json --out runs/profile
+tailtrace analyze runs/profile/trace-rank0.json --rank 0 --out runs/profile/rank0-analysis.json
+
+chmod +x scripts/nsys_rank.sh
+torchrun --standalone --nproc-per-node=2 --no-python scripts/nsys_rank.sh \
+  configs/profile-gpu.json runs/nsys
+nsys export --type sqlite --output runs/nsys/rank0.sqlite runs/nsys/nsys-rank0.nsys-rep
+tailtrace nsys-import runs/nsys/rank0.sqlite --out runs/nsys/rank0-chrome.json
+tailtrace analyze runs/nsys/rank0-chrome.json --rank 0 --out runs/nsys/rank0-analysis.json
+```
+
+Prefer **either** Kineto or Nsight per diagnostic capture: set `profile=false` in a
+copy of the Nsight configuration to avoid CUPTI subscriber conflicts. Keep `nvtx=true`
+and `diagnostic_sync=true`. Throughput experiments should disable all three flags.
+
+For individual kernels, use Nsight Compute after compiling the extension:
+
+```bash
+ncu --set full --kernel-name 'regex:.*forward_kernel.*' --launch-count 5 \
+  --target-processes all -o runs/rmsnorm \
+  tailtrace kernel-bench --rows 4096 --width 1024 --out runs/instrumented-kernel.json
+```
+
+Inspect register pressure, achieved occupancy, memory throughput, cache hit rates,
+and warp stall reasons. Timings produced under Nsight Compute are instrumented and
+must not be used as the uninstrumented benchmark. Sources:
+[Nsight Systems guide](https://docs.nvidia.com/nsight-systems/UserGuide/index.html),
+[SQLite schema and serialized IDs](https://docs.nvidia.com/nsight-systems/AnalysisGuide/index.html).
+
