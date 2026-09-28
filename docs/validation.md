@@ -75,3 +75,36 @@ It excludes compilation and warmup and reports forward and forward+backward dist
 Its reference is eager PyTorch, not compiled PyTorch or every existing fused library.
 Winning this microbenchmark is not sufficient to claim a training improvement.
 
+## GPU training and multi-node execution
+
+```bash
+torchrun --standalone --nproc-per-node=2 -m tailtrace train \
+  --config configs/gpu-ddp.json --out runs/ddp
+torchrun --standalone --nproc-per-node=2 -m tailtrace train \
+  --config configs/gpu-fsdp2.json --out runs/fsdp2
+```
+
+These example configurations have **different model sizes** and cannot be used as a
+paired DDP/FSDP2 comparison. Use the same baseline configuration plus
+`configs/interventions/fsdp2.json` for a controlled strategy experiment. Likewise,
+`configs/gpu-baseline.json` plus `balance.json` tests the planner. Device memory demands
+depend on hardware and workload; reduce dimensions if needed and disclose the change.
+
+For two nodes with four GPUs each, set a reachable `MASTER_ADDR` and the same free
+`MASTER_PORT` on both nodes. Install identical dependencies/source and mount the same
+output path. Each node launches one torchrun process with its own node rank:
+
+```bash
+# NODE_RANK=0 on the first node; NODE_RANK=1 on the second.
+torchrun --nnodes=2 --nproc-per-node=4 --node-rank="$NODE_RANK" \
+  --master-addr="$MASTER_ADDR" --master-port="$MASTER_PORT" \
+  -m tailtrace train --config configs/gpu-ddp.json --out /shared/tailtrace/run-001
+```
+
+[scripts/slurm_train.sh](../scripts/slurm_train.sh) implements the equivalent Slurm
+launch. It is an example for an existing allocation, not an automatic cluster purchase.
+For a measured scaling curve, keep a fixed global-token workload for strong scaling;
+the default batch-size setting instead scales global sample count with world size.
+Report which scaling regime you use, links/topology, GPU model/count, precision, and
+the exact source/config hashes.
+
