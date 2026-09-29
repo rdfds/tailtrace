@@ -148,3 +148,31 @@ must not be used as the uninstrumented benchmark. Sources:
 [Nsight Systems guide](https://docs.nvidia.com/nsight-systems/UserGuide/index.html),
 [SQLite schema and serialized IDs](https://docs.nvidia.com/nsight-systems/AnalysisGuide/index.html).
 
+## Ray and Spark
+
+```bash
+pip install -e '.[ray,dev]'
+tailtrace ray-train --config configs/cpu.json --workers 2 --out runs/ray-cpu \
+  --storage "$(pwd)/runs/ray-storage"
+# Existing Ray cluster; train-extra dependencies must be installed on all worker nodes.
+tailtrace ray-train --address auto --config configs/gpu-ddp.json --workers 8 \
+  --out /shared/tailtrace/ray-run --storage /shared/ray-storage
+
+pip install -e '.[spark,dev]'
+# Spark 4 requires Java 17+; the CI job uses Java 17.
+SPARK_LOCAL_IP=127.0.0.1 PYSPARK_SUBMIT_ARGS='--master local[2] pyspark-shell' \
+  tailtrace spark-aggregate 'runs/*/metrics-rank*.jsonl' --out runs/warehouse
+pytest tests/test_spark.py -m spark
+```
+
+The local Ray launch limits the object store to 128 MiB. Ray's default runtime environment
+can fail to start Python workers when the interpreter path contains spaces. TailTrace
+quotes the local `py_executable` override to address this launch issue. The actual
+two-worker CPU test passed from this workspace's `cuda proj` path after that fix. Remote
+cluster launches use the worker nodes' own Python environments.
+
+Ray handles worker placement/process groups; it does not silently replace the global
+batch planner with a DistributedSampler. Spark separates runs by source directory,
+checks duplicate rank/step rows and global-token consistency, and partitions Parquet
+by run. It aggregates records; it does not train the model. Cloud Spark users can read
+the same JSONL from a supported URI. Input globs must be quoted so Spark expands them.
