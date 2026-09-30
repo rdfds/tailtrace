@@ -16,3 +16,18 @@ not yet a demonstrated novel research system or a production training platform.
 The negative CPU smoke result is useful: a plausible quadratic cost model does not
 guarantee a benefit on a small, launch/communication-sensitive workload. Larger GPUs
 could show different behavior, but that must be measured.
+
+## Subsequent engineering work
+
+* Calibrate a cost model using isolated forward/backward timings, including linear MLP
+  work and rank-dependent GPU speeds. Do not fit pure compute from NCCL-inclusive steps.
+* Add real tokenized document shards and verify sample conservation across resumable
+  readers. Keep the synthetic workload for deterministic diagnosis.
+* Add packed/variable-length attention as a separately controlled intervention. It changes
+  the padded-attention cost model; do not silently keep the current proxy.
+* Verify FSDP2 mixed precision and sharded checkpoint recovery on multi-node hardware.
+* Optimize the norm using warp reductions/vectorization and benchmark against compiled
+  PyTorch and existing fused implementations, including adverse shapes.
+* Expand the Nsight adapter with versioned real fixtures and runtime/kernel correlation
+  for queue delays. Do not assume cross-host clocks share an origin.
+* Implement bounded streaming metrics for long jobs and robust crash manifests.
