@@ -35,7 +35,13 @@ def _run(config, out, resume, device, rank, world):
     torch.set_num_threads(config.threads)
     torch.manual_seed(config.seed)
     lengths = make_lengths(config.samples, config.min_length, config.max_length, config.seed)
-    plans = plan_epoch(lengths, world, config.batch_size, config.seed, config.planner)
+    fleet = None
+    if config.fleet_path:
+        from tailtrace.fleet import FleetProfile
+
+        fleet = FleetProfile.load(config.fleet_path)
+        fleet.check_workload(config, world)
+    plans = plan_epoch(lengths, world, config.batch_size, config.seed, config.planner, fleet)
     if not plans:
         raise ValueError("samples must cover at least one complete global batch")
     model = wrap_model(CausalTransformer(config).to(device), config, device, world)
@@ -44,7 +50,9 @@ def _run(config, out, resume, device, rank, world):
     if resume:
         from tailtrace.checkpoint import restore
 
-        start_step = restore(resume, model, optimizer, config, world)
+        start_step = restore(
+            resume, model, optimizer, config, world, fleet.sha256 if fleet else None
+        )
         if start_step >= config.steps:
             raise ValueError("resume checkpoint must precede configured steps")
     activities = [torch.profiler.ProfilerActivity.CPU]
@@ -75,7 +83,7 @@ def _run(config, out, resume, device, rank, world):
             epoch, offset = divmod(step, len(plans))
             if epoch != current_epoch:
                 plans = plan_epoch(
-                    lengths, world, config.batch_size, config.seed + epoch, config.planner
+                    lengths, world, config.batch_size, config.seed + epoch, config.planner, fleet
                 )
                 current_epoch = epoch
             plan = plans[offset]
@@ -137,7 +145,14 @@ def _run(config, out, resume, device, rank, world):
                 from tailtrace.checkpoint import save
 
                 save(
-                    out / f"checkpoint-{step + 1}", model, optimizer, config, world, step + 1, rank
+                    out / f"checkpoint-{step + 1}",
+                    model,
+                    optimizer,
+                    config,
+                    world,
+                    step + 1,
+                    rank,
+                    fleet.sha256 if fleet else None,
                 )
     if device.type == "cuda":
         torch.cuda.synchronize()
@@ -176,6 +191,8 @@ def _run(config, out, resume, device, rank, world):
             "dropped_samples_per_epoch": config.samples % (world * config.batch_size),
             "timing": "cuda_event" if device.type == "cuda" else "cpu_wall",
             "instrumented": config.profile or config.diagnostic_sync or config.nvtx,
+            "fleet": fleet.summary() if fleet else None,
+            "cost_scope": "isolated_compute_estimate" if fleet else "padded_attention_proxy",
         }
         atomic_json(out / "manifest.json", manifest)
         from tailtrace.report import summarize_run

@@ -22,6 +22,7 @@ class TrainConfig:
     lr: float = 0.001
     strategy: str = "ddp"
     planner: str = "balanced"
+    fleet_path: str | None = None
     kernel: str = "reference"
     device: str = "cpu"
     precision: str = "fp32"
@@ -79,7 +80,7 @@ class TrainConfig:
             raise ValueError("lr must be positive and delay_ms nonnegative")
         for field, choices in {
             "strategy": {"single", "ddp", "fsdp2"},
-            "planner": {"random", "balanced"},
+            "planner": {"random", "balanced", "fleet"},
             "kernel": {"reference", "cuda"},
             "device": {"cpu", "cuda"},
             "precision": {"fp32", "bf16"},
@@ -90,6 +91,12 @@ class TrainConfig:
             raise ValueError("FSDP2 requires CUDA in this project")
         if self.kernel == "cuda" and self.device != "cuda":
             raise ValueError("the CUDA kernel requires device=cuda")
+        if self.fleet_path is not None and (
+            not isinstance(self.fleet_path, str) or not self.fleet_path
+        ):
+            raise ValueError("fleet_path must be a nonempty string")
+        if (self.planner == "fleet") != (self.fleet_path is not None):
+            raise ValueError("planner=fleet and fleet_path must be supplied together")
 
     @classmethod
     def load(cls, path: str | Path):

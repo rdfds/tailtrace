@@ -9,7 +9,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class BatchPlan:
     ranks: tuple[tuple[int, ...], ...]
-    costs: tuple[int, ...]
+    costs: tuple[int | float, ...]
     tokens: int
 
 
@@ -19,10 +19,19 @@ def padded_cost(indices: list[int] | tuple[int, ...], lengths: list[int]) -> int
 
 
 def plan_epoch(
-    lengths: list[int], world_size: int, batch_size: int, seed: int, mode: str = "balanced"
+    lengths: list[int],
+    world_size: int,
+    batch_size: int,
+    seed: int,
+    mode: str = "balanced",
+    fleet=None,
 ) -> list[BatchPlan]:
-    if world_size < 1 or batch_size < 1 or mode not in {"random", "balanced"}:
+    if world_size < 1 or batch_size < 1 or mode not in {"random", "balanced", "fleet"}:
         raise ValueError("invalid planner arguments")
+    if mode == "fleet" and (fleet is None or len(fleet.models) != world_size):
+        raise ValueError("fleet mode requires one cost model per rank")
+    if fleet is not None and mode != "fleet":
+        raise ValueError("a fleet profile requires planner=fleet")
     if any(isinstance(n, bool) or not isinstance(n, int) or n < 2 for n in lengths):
         raise ValueError("lengths must be integers >= 2")
     order = list(range(len(lengths)))
@@ -31,6 +40,17 @@ def plan_epoch(
     plans = []
     for step, start in enumerate(range(0, len(order) - global_size + 1, global_size)):
         ids = order[start : start + global_size]
+        if mode == "fleet":
+            from tailtrace.cost import group_cost
+            from tailtrace.scheduler import schedule
+
+            groups = schedule(ids, lengths, fleet.models)
+            fleet.check_domains(groups, lengths)
+            costs = tuple(
+                group_cost(g, lengths, m) for g, m in zip(groups, fleet.models, strict=True)
+            )
+            plans.append(BatchPlan(groups, costs, sum(lengths[i] - 1 for i in ids)))
+            continue
         if mode == "random":
             groups = [ids[r * batch_size : (r + 1) * batch_size] for r in range(world_size)]
         else:
