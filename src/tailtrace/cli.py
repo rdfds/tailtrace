@@ -18,6 +18,13 @@ def main():
     train.add_argument("--config", required=True)
     train.add_argument("--out", required=True)
     train.add_argument("--resume")
+    calibration = commands.add_parser("calibrate", help="fit isolated per-rank compute models")
+    calibration.add_argument("--config", required=True)
+    calibration.add_argument("--batches", type=int, nargs="+", default=[1, 2, 4, 8])
+    calibration.add_argument("--lengths", type=int, nargs="+", default=[8, 16, 32, 64])
+    calibration.add_argument("--repeats", type=int, default=7)
+    calibration.add_argument("--warmup", type=int, default=2)
+    calibration.add_argument("--out", required=True)
     analyze = commands.add_parser("analyze", help="analyze one rank's Chrome/Kineto trace")
     analyze.add_argument("trace")
     analyze.add_argument("--rank", type=int, default=0)
@@ -55,6 +62,24 @@ def main():
     benchmark.add_argument("--dtype", choices=["float32", "float16", "bfloat16"], default="float32")
     benchmark.add_argument("--out", required=True)
     args = parser.parse_args()
+    if args.command == "calibrate":
+        from tailtrace.collect import collect
+        from tailtrace.config import TrainConfig
+
+        print(
+            json.dumps(
+                collect(
+                    TrainConfig.load(args.config),
+                    args.batches,
+                    args.lengths,
+                    args.repeats,
+                    args.warmup,
+                    args.out,
+                ),
+                indent=2,
+            )
+        )
+        return
     if args.command == "train":
         from tailtrace.config import TrainConfig
         from tailtrace.train import run
