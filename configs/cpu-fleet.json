@@ -1,0 +1,17 @@
+{
+  "seed": 17,
+  "samples": 128,
+  "min_length": 8,
+  "max_length": 64,
+  "batch_size": 4,
+  "steps": 20,
+  "warmup": 4,
+  "width": 32,
+  "heads": 4,
+  "layers": 2,
+  "vocab_size": 256,
+  "device": "cpu",
+  "strategy": "ddp",
+  "planner": "fleet",
+  "fleet_path": "configs/fleet-declared.json"
+}

@@ -8,6 +8,7 @@ from torch.nn.parallel import DistributedDataParallel
 
 from tailtrace.config import TrainConfig
 from tailtrace.evidence import atomic_json
+from tailtrace.fleet import FleetProfile
 from tailtrace.model import CausalTransformer, make_batch, token_loss
 from tailtrace.planner import plan_epoch
 
@@ -21,7 +22,18 @@ def main():
     lengths = [24, 3, 3, 3, 3, 3, 3, 3, 24, 12, 8, 9, 3, 5, 4, 16]
     errors = {}
     try:
-        for mode in ("random", "balanced"):
+        fleet = FleetProfile(
+            {
+                "schema_version": 1,
+                "evidence": "declared",
+                "units": "proxy",
+                "ranks": [
+                    {"model": {"quadratic": 1, "max_samples": 7}},
+                    {"model": {"quadratic": 4, "max_samples": 7}},
+                ],
+            }
+        )
+        for mode in ("random", "balanced", "fleet"):
             torch.manual_seed(91)
             # FP64 separates objective correctness from fp32 cancellation in AdamW's
             # near-zero gradients. FP32 gradient equivalence is tested independently.
@@ -31,7 +43,7 @@ def main():
             model = DistributedDataParallel(local)
             reference_optim = torch.optim.AdamW(reference.parameters(), lr=0.001)
             optim = torch.optim.AdamW(model.parameters(), lr=0.001)
-            plans = plan_epoch(lengths, world, 4, 3, mode)
+            plans = plan_epoch(lengths, world, 4, 3, mode, fleet if mode == "fleet" else None)
             for plan in plans:
                 reference_optim.zero_grad(set_to_none=True)
                 optim.zero_grad(set_to_none=True)

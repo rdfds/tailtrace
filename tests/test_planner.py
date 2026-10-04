@@ -38,3 +38,25 @@ def test_variable_cardinality_can_reduce_proxy_tail():
     balanced = plan_epoch(lengths, 2, 4, 1, "balanced")[0]
     assert max(balanced.costs) < max(random.costs)
     assert sorted(map(len, balanced.ranks)) == [1, 7]
+
+
+def test_fleet_keeps_the_same_global_batches_without_rotating_rank_identity():
+    from tailtrace.fleet import FleetProfile
+
+    fleet = FleetProfile(
+        {
+            "schema_version": 1,
+            "evidence": "declared",
+            "units": "proxy",
+            "ranks": [
+                {"model": {"quadratic": 1, "max_samples": 7}},
+                {"model": {"quadratic": 4, "max_samples": 7}},
+            ],
+        }
+    )
+    baseline = plan_epoch([16] * 32, 2, 4, 7, "random")
+    plans = plan_epoch([16] * 32, 2, 4, 7, "fleet", fleet)
+    for a, b in zip(baseline, plans, strict=True):
+        assert sorted(i for g in a.ranks for i in g) == sorted(i for g in b.ranks for i in g)
+        assert a.tokens == b.tokens
+        assert len(b.ranks[0]) > len(b.ranks[1])

@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "evidence": "declared",
+  "units": "proxy",
+  "ranks": [
+    {"model": {"quadratic": 1, "linear": 8, "overhead": 50, "max_samples": 7, "max_padded_tokens": 512}},
+    {"model": {"quadratic": 3, "linear": 12, "overhead": 80, "max_samples": 7, "max_padded_tokens": 384}}
+  ]
+}
