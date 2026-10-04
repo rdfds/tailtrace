@@ -3,7 +3,16 @@ import pytest
 from tailtrace.cost import RankCost
 
 
-@pytest.mark.parametrize("field,value", [("quadratic", -1), ("linear", float("nan")), ("overhead", True), ("max_samples", None), ("max_padded_tokens", 0)])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("quadratic", -1),
+        ("linear", float("nan")),
+        ("overhead", True),
+        ("max_samples", None),
+        ("max_padded_tokens", 0),
+    ],
+)
 def test_invalid_model(field, value):
     with pytest.raises(ValueError):
         RankCost(**{field: value})

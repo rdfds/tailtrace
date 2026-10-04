@@ -41,6 +41,8 @@ def test_truncated_search_does_not_claim_optimal_or_infeasible():
     result = solve_exact(list(range(4)), [3, 4, 5, 6], models, node_budget=1)
     assert result["status"] == "budget_exhausted"
     assert result["groups"] is None
-    warm = solve_exact(list(range(4)), [3, 4, 5, 6], models, node_budget=1, incumbent=[[0, 1], [2, 3]])
+    warm = solve_exact(
+        list(range(4)), [3, 4, 5, 6], models, node_budget=1, incumbent=[[0, 1], [2, 3]]
+    )
     assert warm["groups"] == [[0, 1], [2, 3]]
     assert warm["lower_bound"] <= warm["upper_bound"]

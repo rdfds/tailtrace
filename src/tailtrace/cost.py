@@ -42,10 +42,7 @@ class RankCost:
         return (
             count <= self.max_samples
             and (self.max_padded_tokens is None or count * width <= self.max_padded_tokens)
-            and (
-                self.max_attention_cells is None
-                or count * width**2 <= self.max_attention_cells
-            )
+            and (self.max_attention_cells is None or count * width**2 <= self.max_attention_cells)
         )
 
     def to_dict(self):

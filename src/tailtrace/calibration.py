@@ -38,13 +38,18 @@ def fit_nonnegative(shapes):
     candidates = []
     for count in (1, 2, 3):
         for active in itertools.combinations(range(3), count):
-            solution = _solve([[gram[i][j] for j in active] for i in active], [rhs[i] for i in active])
+            solution = _solve(
+                [[gram[i][j] for j in active] for i in active], [rhs[i] for i in active]
+            )
             if solution is None or any(v < -1e-9 for v in solution):
                 continue
             coefficients = [0.0] * 3
             for i, value in zip(active, solution, strict=True):
                 coefficients[i] = max(0.0, value) / scales[i]
-            error = sum((sum(a * b for a, b in zip(row, coefficients, strict=True)) - y) ** 2 for row, y in zip(features, target, strict=True))
+            error = sum(
+                (sum(a * b for a, b in zip(row, coefficients, strict=True)) - y) ** 2
+                for row, y in zip(features, target, strict=True)
+            )
             candidates.append((error, coefficients))
     if not candidates:
         raise ValueError("nonnegative fit failed")
@@ -57,7 +62,12 @@ def fit_rank(rows, seed=17):
         batch, width, ms = row["batch"], row["width"], row["ms"]
         if any(isinstance(v, bool) or not isinstance(v, int) or v < 1 for v in (batch, width)):
             raise ValueError("batch and width must be positive integers")
-        if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms) or ms <= 0:
+        if (
+            isinstance(ms, bool)
+            or not isinstance(ms, (int, float))
+            or not math.isfinite(ms)
+            or ms <= 0
+        ):
             raise ValueError("timings must be positive finite milliseconds")
         replicates.setdefault((batch, width), []).append(ms)
     shapes = [(b, w, statistics.median(values)) for (b, w), values in sorted(replicates.items())]
@@ -69,10 +79,36 @@ def fit_rank(rows, seed=17):
     coefficients = fit_nonnegative(train)
     if coefficients[0] + coefficients[1] <= 0:
         raise ValueError("fit has no positive workload-dependent term")
-    predictions = [coefficients[0] * b * w**2 + coefficients[1] * b * w + coefficients[2] for b, w, _ in heldout]
+    predictions = [
+        coefficients[0] * b * w**2 + coefficients[1] * b * w + coefficients[2]
+        for b, w, _ in heldout
+    ]
     errors = [abs(p / actual - 1) for p, (_, _, actual) in zip(predictions, heldout, strict=True)]
     return {
-        "model": {"quadratic": coefficients[0], "linear": coefficients[1], "overhead": coefficients[2], "max_samples": max(b for b, _, _ in shapes)},
-        "domain": {"min_batch": min(b for b, _, _ in shapes), "max_batch": max(b for b, _, _ in shapes), "min_width": min(w for _, w, _ in shapes), "max_width": max(w for _, w, _ in shapes)},
-        "fit": {"method": "median_replicates_nnls", "split_seed": seed, "train_shapes": [list(s[:2]) for s in train], "heldout_shapes": [list(s[:2]) for s in heldout], "heldout_median_relative_error": statistics.median(errors), "heldout_max_relative_error": max(errors), "heldout_rmse_ms": math.sqrt(statistics.mean((p - actual) ** 2 for p, (_, _, actual) in zip(predictions, heldout, strict=True)))},
+        "model": {
+            "quadratic": coefficients[0],
+            "linear": coefficients[1],
+            "overhead": coefficients[2],
+            "max_samples": max(b for b, _, _ in shapes),
+        },
+        "domain": {
+            "min_batch": min(b for b, _, _ in shapes),
+            "max_batch": max(b for b, _, _ in shapes),
+            "min_width": min(w for _, w, _ in shapes),
+            "max_width": max(w for _, w, _ in shapes),
+        },
+        "fit": {
+            "method": "median_replicates_nnls",
+            "split_seed": seed,
+            "train_shapes": [list(s[:2]) for s in train],
+            "heldout_shapes": [list(s[:2]) for s in heldout],
+            "heldout_median_relative_error": statistics.median(errors),
+            "heldout_max_relative_error": max(errors),
+            "heldout_rmse_ms": math.sqrt(
+                statistics.mean(
+                    (p - actual) ** 2
+                    for p, (_, _, actual) in zip(predictions, heldout, strict=True)
+                )
+            ),
+        },
     }

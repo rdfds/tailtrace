@@ -12,7 +12,9 @@ def objective(groups, lengths, models):
 
 
 def feasible(groups, lengths, models):
-    return all(g and m.permits(*group_shape(g, lengths)) for g, m in zip(groups, models, strict=True))
+    return all(
+        g and m.permits(*group_shape(g, lengths)) for g, m in zip(groups, models, strict=True)
+    )
 
 
 def improve(groups, lengths, models, rounds=12):
@@ -57,7 +59,12 @@ def schedule(ids, lengths, models, local_rounds=12):
         if feasible(baseline, lengths, models):
             candidates.append(baseline)
     # Different ownership priorities help when only some ranks can host long samples.
-    priorities = [list(range(len(models))), sorted(range(len(models)), key=lambda r: models[r].predict(1, max(lengths[i] - 1 for i in ids)))]
+    priorities = [
+        list(range(len(models))),
+        sorted(
+            range(len(models)), key=lambda r: models[r].predict(1, max(lengths[i] - 1 for i in ids))
+        ),
+    ]
     for priority in priorities:
         groups = [[] for _ in models]
         for position, i in enumerate(sorted(ids, key=lambda i: (lengths[i], i), reverse=True)):
@@ -70,7 +77,10 @@ def schedule(ids, lengths, models, local_rounds=12):
                     continue
                 if sum(not g for g in trial) > remaining:
                     continue
-                if sum(m.max_samples - len(g) for m, g in zip(models, trial, strict=True)) < remaining:
+                if (
+                    sum(m.max_samples - len(g) for m, g in zip(models, trial, strict=True))
+                    < remaining
+                ):
                     continue
                 eligible.append((objective(trial, lengths, models), priority.index(rank), rank))
             if not eligible:

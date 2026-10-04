@@ -13,7 +13,10 @@ def validate_problem(ids, lengths, models):
         raise ValueError("require unique samples and at least one sample per rank")
     if any(isinstance(i, bool) or not isinstance(i, int) or not 0 <= i < len(lengths) for i in ids):
         raise ValueError("sample index out of range")
-    if any(isinstance(lengths[i], bool) or not isinstance(lengths[i], int) or lengths[i] < 2 for i in ids):
+    if any(
+        isinstance(lengths[i], bool) or not isinstance(lengths[i], int) or lengths[i] < 2
+        for i in ids
+    ):
         raise ValueError("sequence lengths must be integers >= 2")
 
 

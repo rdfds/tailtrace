@@ -26,7 +26,9 @@ def test_baseline_candidate_prevents_proxy_regression():
         lengths = [2 + (i * 37 + seed * 13) % 79 for i in range(8)]
         models = [RankCost(1, 2, 3, 8), RankCost(2, 1, 9, 8)]
         baseline = certify(list(range(8)), lengths, [list(range(4)), list(range(4, 8))], models)
-        candidate = certify(list(range(8)), lengths, schedule(list(range(8)), lengths, models), models)
+        candidate = certify(
+            list(range(8)), lengths, schedule(list(range(8)), lengths, models), models
+        )
         assert candidate["makespan"] <= baseline["makespan"]
 
 
