@@ -39,24 +39,38 @@ def _run(config, out, resume, device, rank, world):
     if config.fleet_path:
         from tailtrace.fleet import FleetProfile
 
-        fleet = FleetProfile.load(config.fleet_path)
-        fleet.check_workload(config, world)
-        fleet.check_hardware(
-            rank,
-            {
-                **origin,
-                "torch": str(torch.__version__),
-                "device": str(device),
-                "gpu": torch.cuda.get_device_name() if device.type == "cuda" else None,
-                "cuda_runtime": torch.version.cuda,
-            },
-        )
-        hashes = [None] * world
+        error = None
+        try:
+            fleet = FleetProfile.load(config.fleet_path)
+            fleet.check_workload(config, world)
+            fleet.check_hardware(
+                rank,
+                {
+                    **origin,
+                    "torch": str(torch.__version__),
+                    "device": str(device),
+                    "gpu": torch.cuda.get_device_name() if device.type == "cuda" else None,
+                    "cuda_runtime": torch.version.cuda,
+                },
+            )
+            plans = plan_epoch(
+                lengths, world, config.batch_size, config.seed, config.planner, fleet
+            )
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            error = f"rank {rank}: {exc}"
+        status = {"error": error, "sha256": fleet.sha256 if fleet else None}
+        statuses = [None] * world
         if world > 1:
-            dist.all_gather_object(hashes, fleet.sha256)
-            if len(set(hashes)) != 1:
-                raise ValueError("ranks loaded different fleet profile contents")
-    plans = plan_epoch(lengths, world, config.batch_size, config.seed, config.planner, fleet)
+            dist.all_gather_object(statuses, status)
+        else:
+            statuses = [status]
+        errors = [s["error"] for s in statuses if s["error"]]
+        if errors:
+            raise ValueError("fleet preflight failed: " + "; ".join(errors))
+        if len({s["sha256"] for s in statuses}) != 1:
+            raise ValueError("ranks loaded different fleet profile contents")
+    else:
+        plans = plan_epoch(lengths, world, config.batch_size, config.seed, config.planner)
     if not plans:
         raise ValueError("samples must cover at least one complete global batch")
     model = wrap_model(CausalTransformer(config).to(device), config, device, world)
