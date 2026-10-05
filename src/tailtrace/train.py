@@ -41,6 +41,21 @@ def _run(config, out, resume, device, rank, world):
 
         fleet = FleetProfile.load(config.fleet_path)
         fleet.check_workload(config, world)
+        fleet.check_hardware(
+            rank,
+            {
+                **origin,
+                "torch": str(torch.__version__),
+                "device": str(device),
+                "gpu": torch.cuda.get_device_name() if device.type == "cuda" else None,
+                "cuda_runtime": torch.version.cuda,
+            },
+        )
+        hashes = [None] * world
+        if world > 1:
+            dist.all_gather_object(hashes, fleet.sha256)
+            if len(set(hashes)) != 1:
+                raise ValueError("ranks loaded different fleet profile contents")
     plans = plan_epoch(lengths, world, config.batch_size, config.seed, config.planner, fleet)
     if not plans:
         raise ValueError("samples must cover at least one complete global batch")

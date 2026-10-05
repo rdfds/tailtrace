@@ -46,3 +46,28 @@ def test_observed_requires_scope_and_rejects_workload_and_domain_drift():
     bad["scope"] = "ddp_step"
     with pytest.raises(ValueError, match="isolated scope"):
         FleetProfile(bad)
+
+
+def test_observed_profile_checks_source_and_rank_hardware():
+    hardware = {
+        "source_sha256": "abc",
+        "hostname": "worker0",
+        "platform": "Linux",
+        "torch": "2.8.0",
+        "gpu": None,
+        "cuda_runtime": None,
+        "device": "cpu",
+    }
+    data = {
+        "schema_version": 1,
+        "evidence": "observed_isolated",
+        "units": "ms",
+        "scope": "forward_backward_no_collectives",
+        "workload": workload_signature(TrainConfig()),
+        "hardware": [hardware],
+        "ranks": [{"model": {"quadratic": 1}}],
+    }
+    profile = FleetProfile(data)
+    profile.check_hardware(0, hardware)
+    with pytest.raises(ValueError, match="source_sha256"):
+        profile.check_hardware(0, {**hardware, "source_sha256": "different"})

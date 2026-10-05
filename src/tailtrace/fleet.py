@@ -46,6 +46,8 @@ class FleetProfile:
         if not isinstance(data.get("ranks"), list) or not data["ranks"]:
             raise ValueError("fleet needs a nonempty ordered rank list")
         self.models = tuple(RankCost(**rank["model"]) for rank in data["ranks"])
+        if data["evidence"] == "observed_isolated" and len(data["hardware"]) != len(self.models):
+            raise ValueError("observed profile hardware must cover every rank")
         self.data = json.loads(json.dumps(data, allow_nan=False))
         self.sha256 = hashlib.sha256(
             json.dumps(self.data, sort_keys=True, separators=(",", ":")).encode()
@@ -75,6 +77,21 @@ class FleetProfile:
                     or not domain["min_width"] <= width <= domain["max_width"]
                 ):
                     raise ValueError("planned shape lies outside the calibration domain")
+
+    def check_hardware(self, rank, current):
+        if self.data["evidence"] == "observed_isolated":
+            recorded = self.data["hardware"][rank]
+            for key in (
+                "source_sha256",
+                "hostname",
+                "platform",
+                "torch",
+                "gpu",
+                "cuda_runtime",
+                "device",
+            ):
+                if key not in recorded or recorded[key] != current.get(key):
+                    raise ValueError(f"calibrated rank {rank} hardware/software changed: {key}")
 
     def summary(self):
         return {
