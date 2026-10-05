@@ -92,6 +92,7 @@ def summarize_run(directory: str | Path) -> dict:
 
 
 INTERVENTIONS = {
+    "fleet_path",
     "planner",
     "kernel",
     "bucket_cap_mb",
@@ -123,7 +124,16 @@ def compare_runs(baselines: list[str], candidates: list[str], bootstrap: int = 4
         differences = {k for k in a["config"] if a["config"][k] != b["config"].get(k)}
         if not differences or differences - INTERVENTIONS:
             raise ValueError(f"uncontrolled or absent intervention: {sorted(differences)}")
-        pair_protocol = [{k: v for k, v in m["config"].items() if k != "seed"} for m in (a, b)]
+        for m in (a, b):
+            if m["config"].get("planner") == "fleet" and not m.get("fleet", {}).get("sha256"):
+                raise ValueError("fleet runs require a recorded profile content hash")
+        pair_protocol = [
+            {
+                "config": {k: v for k, v in m["config"].items() if k != "seed"},
+                "fleet": m.get("fleet"),
+            }
+            for m in (a, b)
+        ]
         if protocol is not None and protocol != pair_protocol:
             raise ValueError("experiment settings differ across seed pairs")
         protocol = pair_protocol
@@ -164,6 +174,8 @@ def compare_runs(baselines: list[str], candidates: list[str], bootstrap: int = 4
                 "candidate_median_ms": sb["median_step_ms"],
                 "baseline_tokens_per_second": sa["tokens_per_second"],
                 "candidate_tokens_per_second": sb["tokens_per_second"],
+                "baseline_fleet": a.get("fleet"),
+                "candidate_fleet": b.get("fleet"),
             }
         )
     if len({tuple(p["interventions"]) for p in pairs}) != 1:

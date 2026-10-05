@@ -99,4 +99,5 @@ class FleetProfile:
             "evidence": self.data["evidence"],
             "units": self.data["units"],
             "scope": self.data.get("scope", "declared_compute_proxy"),
+            "ranks": self.data["ranks"],
         }

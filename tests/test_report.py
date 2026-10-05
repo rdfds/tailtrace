@@ -91,3 +91,20 @@ def test_one_pair_has_no_confidence_interval_and_html_is_escaped(tmp_path):
     path = tmp_path / "report.html"
     write_html(result, path)
     assert "<script>" not in path.read_text()
+
+
+def test_fleet_content_cannot_drift_across_seed_pairs(tmp_path):
+    bases, candidates = [], []
+    for seed in (1, 2):
+        a, b = tmp_path / f"a{seed}", tmp_path / f"b{seed}"
+        baseline = fixture_run(a, seed, "random")
+        candidate = fixture_run(b, seed, "fleet")
+        baseline["config"]["fleet_path"] = None
+        candidate["config"]["fleet_path"] = "same/path.json"
+        candidate["fleet"] = {"sha256": str(seed), "evidence": "declared"}
+        atomic_json(a / "manifest.json", baseline)
+        atomic_json(b / "manifest.json", candidate)
+        bases.append(str(a))
+        candidates.append(str(b))
+    with pytest.raises(ValueError, match="settings differ"):
+        compare_runs(bases, candidates)
