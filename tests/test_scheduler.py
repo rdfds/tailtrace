@@ -35,3 +35,13 @@ def test_baseline_candidate_prevents_proxy_regression():
 def test_failure_is_not_an_infeasibility_claim():
     with pytest.raises(ValueError, match="infeasibility is not proven"):
         schedule([0, 1], [100, 100], [RankCost(max_padded_tokens=3)] * 2)
+
+
+def test_beam_recovers_a_feasible_assignment_that_greedy_misses():
+    lengths = [128, 96, 8, 8, 8, 8]
+    models = [RankCost(1, 8, 20, 5, 600), RankCost(2, 8, 20, 3, 180)]
+    ids = [3, 1, 5, 4, 0, 2]
+    with pytest.raises(ValueError, match="no feasible schedule"):
+        schedule(ids, lengths, models, beam_width=0)
+    groups = schedule(ids, lengths, models)
+    certify(ids, lengths, groups, models)

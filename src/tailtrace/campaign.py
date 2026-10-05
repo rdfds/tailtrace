@@ -59,13 +59,17 @@ def evaluate(case, node_budget):
     baseline_plan = plan_epoch(lengths, len(models), 3, case["seed"], "random")[0]
     ids = [i for g in baseline_plan.ranks for i in g]
     schedules = {}
-    for name in ("random", "balanced", "fleet_greedy", "fleet_local"):
+    for name in ("random", "balanced", "fleet_greedy", "fleet_local", "fleet_beam"):
         try:
             if name in {"random", "balanced"}:
                 groups = plan_epoch(lengths, len(models), 3, case["seed"], name)[0].ranks
             else:
                 groups = schedule(
-                    ids, lengths, models, local_rounds=0 if name == "fleet_greedy" else 12
+                    ids,
+                    lengths,
+                    models,
+                    local_rounds=0 if name == "fleet_greedy" else 12,
+                    beam_width=64 if name == "fleet_beam" else 0,
                 )
             schedules[name] = {
                 "groups": [list(g) for g in groups],
@@ -101,7 +105,7 @@ def summarize(rows):
         },
         "methods": {},
     }
-    for method in ("random", "balanced", "fleet_greedy", "fleet_local"):
+    for method in ("random", "balanced", "fleet_greedy", "fleet_local", "fleet_beam"):
         values = [
             r["schedules"][method]["proven_regret"]
             for r in rows

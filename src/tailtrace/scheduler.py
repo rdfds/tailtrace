@@ -48,10 +48,44 @@ def improve(groups, lengths, models, rounds=12):
     return groups
 
 
-def schedule(ids, lengths, models, local_rounds=12):
+def beam_candidates(ids, lengths, models, width):
+    """Bounded constructive search; deduplicate cost-equivalent partial rank states."""
+    states = [[[] for _ in models]]
+    order = sorted(ids, key=lambda i: (lengths[i], i), reverse=True)
+    for position, i in enumerate(order):
+        remaining = len(order) - position - 1
+        candidates = {}
+        for groups in states:
+            for rank, model in enumerate(models):
+                trial = [g.copy() for g in groups]
+                trial[rank].append(i)
+                if not model.permits(*group_shape(trial[rank], lengths)):
+                    continue
+                if sum(not g for g in trial) > remaining:
+                    continue
+                if (
+                    sum(m.max_samples - len(g) for m, g in zip(models, trial, strict=True))
+                    < remaining
+                ):
+                    continue
+                key = tuple(group_shape(g, lengths) for g in trial)
+                candidates.setdefault(key, trial)
+        states = sorted(candidates.values(), key=lambda g: objective(g, lengths, models))[:width]
+        if not states:
+            return []
+    return [g for g in states if feasible(g, lengths, models)]
+
+
+def schedule(ids, lengths, models, local_rounds=12, beam_width=64):
     validate_problem(ids, lengths, models)
     if len(models) > 64 or len(ids) > 512:
         raise ValueError("fleet heuristic supports <=64 ranks and <=512 samples per batch")
+    if (
+        isinstance(beam_width, bool)
+        or not isinstance(beam_width, int)
+        or not 0 <= beam_width <= 256
+    ):
+        raise ValueError("beam_width must be an integer in [0, 256]")
     candidates = []
     if len(ids) % len(models) == 0:
         batch = len(ids) // len(models)
@@ -89,6 +123,9 @@ def schedule(ids, lengths, models, local_rounds=12):
         else:
             if feasible(groups, lengths, models):
                 candidates.append(groups)
+    # Limit branching overhead to small batches; large workloads retain greedy + moves.
+    if beam_width and len(ids) <= 32 and len(models) <= 8:
+        candidates.extend(beam_candidates(ids, lengths, models, beam_width))
     if not candidates:
         raise ValueError("heuristic found no feasible schedule; infeasibility is not proven")
     # Retain the baseline even when a greedy construction becomes trapped by capacities.
