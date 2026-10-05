@@ -25,6 +25,12 @@ def main():
     calibration.add_argument("--repeats", type=int, default=7)
     calibration.add_argument("--warmup", type=int, default=2)
     calibration.add_argument("--out", required=True)
+    campaign = commands.add_parser(
+        "schedule-audit", help="audit heuristic schedules against an exact proxy oracle"
+    )
+    campaign.add_argument("--seeds", type=int, nargs="+", default=[17, 23, 31, 43])
+    campaign.add_argument("--node-budget", type=int, default=100_000)
+    campaign.add_argument("--out", required=True)
     analyze = commands.add_parser("analyze", help="analyze one rank's Chrome/Kineto trace")
     analyze.add_argument("trace")
     analyze.add_argument("--rank", type=int, default=0)
@@ -62,6 +68,16 @@ def main():
     benchmark.add_argument("--dtype", choices=["float32", "float16", "bfloat16"], default="float32")
     benchmark.add_argument("--out", required=True)
     args = parser.parse_args()
+    if args.command == "schedule-audit":
+        from pathlib import Path
+
+        from tailtrace.campaign import run_campaign
+        from tailtrace.campaign_report import write_campaign_html
+
+        data = run_campaign(args.out, args.seeds, args.node_budget)
+        write_campaign_html(data, Path(args.out) / "report.html")
+        print(json.dumps(data["summary"], indent=2))
+        return
     if args.command == "calibrate":
         from tailtrace.collect import collect
         from tailtrace.config import TrainConfig
