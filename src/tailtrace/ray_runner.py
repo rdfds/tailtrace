@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shlex
 import sys
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -31,6 +32,13 @@ def launch(args):
     from ray.train.torch import TorchConfig, TorchTrainer
 
     config = TrainConfig.load(args.config)
+    if config.fleet_path:
+        # Workers run from Ray's uploaded package directory, not the driver's checkout.
+        # Remote nodes must mount this absolute path; arbitrary data is not uploaded.
+        profile_path = Path(config.fleet_path).resolve()
+        if not profile_path.is_file():
+            raise FileNotFoundError(f"fleet profile is missing: {profile_path}")
+        config = replace(config, fleet_path=str(profile_path))
     if args.workers < 1:
         raise ValueError("workers must be positive")
     if config.strategy == "single" and args.workers != 1:

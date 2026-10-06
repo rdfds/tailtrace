@@ -71,3 +71,18 @@ def test_observed_profile_checks_source_and_rank_hardware():
     profile.check_hardware(0, hardware)
     with pytest.raises(ValueError, match="source_sha256"):
         profile.check_hardware(0, {**hardware, "source_sha256": "different"})
+
+
+def test_observed_unsharded_fit_is_not_an_fsdp2_cost_model():
+    config = TrainConfig(device="cuda", strategy="fsdp2")
+    data = {
+        "schema_version": 1,
+        "evidence": "observed_isolated",
+        "units": "ms",
+        "scope": "forward_backward_no_collectives",
+        "workload": workload_signature(config),
+        "hardware": [{"device": "cuda"}],
+        "ranks": [{"model": {"quadratic": 1}}],
+    }
+    with pytest.raises(ValueError, match="FSDP2 resharding"):
+        FleetProfile(data).check_workload(config, 1)

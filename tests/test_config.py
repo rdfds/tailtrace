@@ -12,6 +12,9 @@ from tailtrace.config import TrainConfig
         {"kernel": "cuda"},
         {"batch_size": -1},
         {"heads": 0},
+        {"planner": "fleet"},
+        {"fleet_path": "profile.json"},
+        {"planner": "fleet", "fleet_path": 123},
     ],
 )
 def test_invalid_config(kwargs):
