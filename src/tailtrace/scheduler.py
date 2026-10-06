@@ -76,7 +76,7 @@ def beam_candidates(ids, lengths, models, width):
     return [g for g in states if feasible(g, lengths, models)]
 
 
-def schedule(ids, lengths, models, local_rounds=12, beam_width=64):
+def schedule(ids, lengths, models, local_rounds=12, beam_width=64, retain_local_incumbent=True):
     validate_problem(ids, lengths, models)
     if len(models) > 64 or len(ids) > 512:
         raise ValueError("fleet heuristic supports <=64 ranks and <=512 samples per batch")
@@ -123,6 +123,7 @@ def schedule(ids, lengths, models, local_rounds=12, beam_width=64):
         else:
             if feasible(groups, lengths, models):
                 candidates.append(groups)
+    local_candidates = candidates.copy()
     # Limit branching overhead to small batches; large workloads retain greedy + moves.
     if beam_width and len(ids) <= 32 and len(models) <= 8:
         candidates.extend(beam_candidates(ids, lengths, models, beam_width))
@@ -131,5 +132,15 @@ def schedule(ids, lengths, models, local_rounds=12, beam_width=64):
     # Retain the baseline even when a greedy construction becomes trapped by capacities.
     best = min(candidates, key=lambda g: objective(g, lengths, models))
     best = improve(best, lengths, models, local_rounds)
+    # A lower-cost construction can enter a worse local-search basin. Retain the
+    # independently refined greedy incumbent, rather than discarding its search path.
+    if retain_local_incumbent and local_candidates:
+        local_best = improve(
+            min(local_candidates, key=lambda g: objective(g, lengths, models)),
+            lengths,
+            models,
+            local_rounds,
+        )
+        best = min((best, local_best), key=lambda g: objective(g, lengths, models))
     certify(ids, lengths, best, models)
     return tuple(tuple(sorted(g)) for g in best)

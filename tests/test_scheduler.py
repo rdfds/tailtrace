@@ -45,3 +45,24 @@ def test_beam_recovers_a_feasible_assignment_that_greedy_misses():
         schedule(ids, lengths, models, beam_width=0)
     groups = schedule(ids, lengths, models)
     certify(ids, lengths, groups, models)
+
+
+def test_beam_retains_independently_refined_local_incumbents():
+    from tailtrace.campaign import cases
+    from tailtrace.planner import plan_epoch
+    from tailtrace.scheduler import objective
+
+    for case in cases([31]):
+        lengths = case["lengths"]
+        models = [RankCost(**m) for m in case["models"]]
+        ids = [
+            i
+            for g in plan_epoch(lengths, len(models), case["batch_size"], 31, "random")[0].ranks
+            for i in g
+        ]
+        try:
+            local = schedule(ids, lengths, models, beam_width=0)
+        except ValueError:
+            continue
+        refined = schedule(ids, lengths, models)
+        assert objective(refined, lengths, models) <= objective(local, lengths, models)
