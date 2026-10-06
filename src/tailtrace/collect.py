@@ -13,7 +13,7 @@ def collect(config, batches, lengths, repeats, warmup, out):
     import torch.distributed as dist
 
     from tailtrace.calibration import fit_rank
-    from tailtrace.distributed import setup
+    from tailtrace.distributed import checkpoint_activations, setup
     from tailtrace.evidence import atomic_json, provenance
     from tailtrace.fleet import workload_signature
     from tailtrace.model import CausalTransformer, make_batch, token_loss
@@ -34,7 +34,7 @@ def collect(config, batches, lengths, repeats, warmup, out):
         torch.set_num_threads(config.threads)
         torch.manual_seed(config.seed)
         # Deliberately unwrapped: DDP/NCCL wait is not an isolated compute target.
-        model = CausalTransformer(config).to(device)
+        model = checkpoint_activations(CausalTransformer(config).to(device), config)
         shapes = [(b, n) for b in batches for n in lengths]
         random.Random(config.seed).shuffle(shapes)
         rows = []

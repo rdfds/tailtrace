@@ -18,6 +18,7 @@ def workload_signature(config):
             "heads",
             "layers",
             "vocab_size",
+            "max_length",
             "kernel",
             "precision",
             "activation_checkpointing",
@@ -64,6 +65,10 @@ class FleetProfile:
             "workload"
         ] != workload_signature(config):
             raise ValueError("calibrated workload changed; collect a new profile")
+        if self.data["evidence"] == "observed_isolated" and config.strategy == "fsdp2":
+            raise ValueError(
+                "isolated unsharded calibration does not model FSDP2 resharding; use a declared proxy"
+            )
 
     def check_domains(self, groups, lengths):
         for group, rank in zip(groups, self.data["ranks"], strict=True):

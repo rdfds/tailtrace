@@ -37,7 +37,7 @@ def setup(config):
     return device, rank, world, owned
 
 
-def wrap_model(model, config, device, world):
+def checkpoint_activations(model, config):
     if config.activation_checkpointing:
         from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
             apply_activation_checkpointing,
@@ -51,6 +51,11 @@ def wrap_model(model, config, device, world):
             checkpoint_wrapper_fn=checkpoint_wrapper,
             check_fn=lambda module: isinstance(module, Block),
         )
+    return model
+
+
+def wrap_model(model, config, device, world):
+    model = checkpoint_activations(model, config)
     if config.strategy == "fsdp2":
         from torch.distributed.device_mesh import init_device_mesh
         from torch.distributed.fsdp import MixedPrecisionPolicy, fully_shard

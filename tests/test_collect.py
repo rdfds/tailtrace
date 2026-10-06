@@ -10,9 +10,9 @@ from tailtrace.fleet import FleetProfile
 
 
 def test_actual_cpu_calibration_retains_raw_samples_and_scope(tmp_path):
-    config = TrainConfig(width=16, heads=2, layers=1, min_length=2, max_length=16, vocab_size=32)
+    config = TrainConfig(width=32, heads=4, layers=2, min_length=2, max_length=64, vocab_size=256)
     out = tmp_path / "calibration"
-    profile = collect(config, [1, 2, 4, 8], [4, 8, 12, 16], 3, 1, out)
+    profile = collect(config, [1, 2, 4, 8], [8, 16, 32, 64], 3, 2, out)
     raw = json.loads((out / "observations.json").read_text())
     assert len(raw["ranks"][0]["rows"]) == 48
     assert raw["timing"] == "cpu_wall"
