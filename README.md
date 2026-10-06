@@ -75,7 +75,7 @@ the offline tools does not load any of these runtimes.
 | Area | Implementation |
 |---|---|
 | Workload intervention | Heterogeneous compute models, capacity-aware beam construction, moves/swaps, conserved global batches |
-| Scheduling audit | Independent feasibility certificates, budgeted exact minimax oracle, five-method adversarial ablations |
+| Scheduling audit | Independent feasibility certificates, budgeted exact minimax oracle, six-method adversarial ablations |
 | Calibration | Isolated compute collection, median replicates, nonnegative fits, shape-separated held-out validation |
 | Distributed training | Causal transformer, token-weighted loss, DDP/FSDP2, bf16, activation checkpointing, torchrun/Slurm launch |
 | CUDA | C++/CUDA residual-RMSNorm forward/backward, fp32 accumulation, deterministic two-pass weight reduction, current-stream support |
@@ -98,10 +98,10 @@ Current CI additionally reproduces the entire oracle campaign and uploads fresh 
 calibration evidence. CUDA/FSDP2 and multi-node execution need NVIDIA validation.
 Component status and launch notes are documented in [validation](docs/validation.md).
 
-The beam scheduler matches the proven proxy optimum in **357 of 358** completed feasible
+The beam scheduler matches the proven proxy optimum in **358 of 358** completed feasible
 searches; it finds feasible assignments in all 374 cases not proven infeasible. Ten cases
 are proven infeasible and sixteen searches hit their node budget. One completed case has
-17.31% beam regret. These results establish behavior under declared models, not hardware
+17.31% regret in the single-basin beam ablation; retaining the local incumbent removes that regression. These results establish behavior under declared models, not hardware
 speedups or an unrestricted optimality guarantee.
 
 ```bash

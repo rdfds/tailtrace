@@ -5,11 +5,11 @@ forward/backward calibration, a bounded beam scheduler, and an exact small-batch
 The shared training loop retains global samples and the token-weighted objective under
 unequal local batch sizes. Profile content hashes guard recovery and paired comparisons.
 
-The [384-case audit](../results/scheduling-audit/README.md) includes raw inputs, five
+The [384-case audit](../results/scheduling-audit/README.md) includes raw inputs, six
 scheduler ablations, feasibility certificates, search budgets, and an interactive offline
-inspector. Beam scheduling reaches the proven optimum in 357 of 358 completed feasible
-searches. Ten cases are proven infeasible; sixteen searches are unfinished. One case has
-17.31% proven regret. These are analytic scheduling results, not GPU performance results.
+inspector. Beam scheduling reaches the proven optimum in 358 of 358 completed feasible
+searches. Ten cases are proven infeasible; sixteen searches are unfinished. The single-basin beam ablation retains a 17.31% regression;
+the default planner avoids it by preserving its local-search incumbent. These are analytic scheduling results, not GPU performance results.
 
 ```bash
 pip install -e .

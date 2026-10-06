@@ -16,7 +16,7 @@ The fleet planner retains a feasible equal-count random assignment, constructs g
 alternatives, and for at most 32 samples / eight ranks runs a width-64 constructive beam.
 Partial beam states with the same ordered `(count, maximum width)` are cost-equivalent
 under this model and can be merged. Physical rank identities never rotate. The planner
-then accepts strict minimax improvements through sample moves and pair swaps, breaking
+then retains independently refined greedy and beam search paths and accepts strict minimax improvements through sample moves and pair swaps, breaking
 ties by total estimated work. It caches epoch plans outside timed training steps.
 
 Including a feasible random baseline guarantees estimated makespan non-regression against

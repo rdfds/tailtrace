@@ -1,7 +1,7 @@
 # Small-batch oracle audit
 
 This is an **analytic proxy experiment**, not a GPU benchmark. The committed
-`campaign.json` contains all 384 cases and five scheduling methods. `report.html` is
+`campaign.json` contains all 384 cases and six scheduling methods. `report.html` is
 a self-contained interactive inspector. The manifest pins the generating source and
 command; hostname is pseudonymized. Inputs and assignments are deterministic.
 
@@ -17,7 +17,8 @@ seeds; the same workload families remain visible, so this is not a blind benchma
 | Legacy balanced | 307 | 291 | 109 | 465.56% |
 | Fleet greedy | 349 | 333 | 160 | 218.46% |
 | Fleet greedy + local moves/swaps | 349 | 333 | 269 | 141.40% |
-| Fleet beam + local moves/swaps | 374 | 358 | 357 | 17.31% |
+| Fleet beam, single search basin | 374 | 358 | 357 | 17.31% |
+| Fleet beam + retained local incumbent | 374 | 358 | 358 | 0.00% |
 
 The oracle completed 358 feasible searches, proved ten cases infeasible, and exhausted
 its 100,000-node budget on sixteen cases. Beam construction found feasible assignments
@@ -25,10 +26,15 @@ in all 374 cases not proven infeasible. This does **not** prove feasibility comp
 in general or optimality in the sixteen unfinished searches. Methods have different
 coverage, so their regret columns describe different feasible subsets.
 
-The remaining proven beam failure is `log_uniform/tight_capacity/w3/seed31`: estimated
-makespan is 17.31% above the exact optimum of 12,548 proxy units. Inspect its assignments
-instead of interpreting the median zero regret as a universal guarantee. The oracle
-bound applies only to this monotone padded compute model and declared constraints.
+The single-basin beam ablation regresses on `log_uniform/tight_capacity/w3/seed31`:
+its estimated makespan is 17.31% above the exact optimum of 12,548 proxy units, while
+local search from the greedy construction reaches that optimum. A better construction
+can enter a worse local-search basin. Retaining both independently refined paths removes
+this regression and guarantees no worse proxy objective than local-only search.
+
+Zero proven regret on these small completed cases is not a universal guarantee. The
+sixteen budget-limited searches have no proven optimality result. The oracle bound applies
+only to this monotone padded compute model and declared constraints.
 
 ```bash
 pip install -e .
