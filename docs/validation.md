@@ -4,7 +4,8 @@
 
 | Component | Local evidence | Remaining validation |
 |---|---|---|
-| Planner, interval algebra, experiment guards | Unit tests passed | Larger heterogeneous workloads |
+| Planner, interval algebra, experiment guards | Unit tests and 384-case oracle campaign | GPU cost-model accuracy and larger batches |
+| Fleet calibration / recovery | Isolated CPU collection and content guards supplied | Hardware fit stability and actual fleet performance |
 | Causal transformer / token objective | CPU gradients passed | Mixed-precision accuracy on GPU |
 | Real two-rank DDP | Gloo fp64 gradients + AdamW updates passed | NCCL multi-node run |
 | Checkpoint recovery | Exact CPU next update and mid-epoch resume passed | FSDP2 shard recovery on GPU |
@@ -12,10 +13,12 @@
 | Nsight SQLite adapter | Generated schema fixtures passed | Versioned NVIDIA-exported fixtures |
 | CUDA norm / FSDP2 | Implemented; manual GPU gate supplied | **No NVIDIA hardware validation yet** |
 | Ray orchestration | Actual two-worker CPU Ray Train test passed | Multi-node GPU Ray validation |
-| Spark aggregation | CI test supplied | Local install blocked by disk space |
+| Spark aggregation | Java 17 GitHub CI passed | Large warehouse / remote storage validation |
 
-CI workflows are configuration, not evidence of a successful remote CI run. No remote
-repository is configured in the initial workspace.
+The baseline [GitHub run](https://github.com/rdfds/tailtrace/actions/runs/37553657508)
+passed CPU, Ray, and Spark jobs. The current workflow also reproduces all 384 scheduling
+cases and retains CPU calibration artifacts. GPU validation remains separate; a passing
+CPU workflow does not validate CUDA kernels or FSDP2.
 
 ## Run the local correctness suite
 

@@ -48,7 +48,9 @@ tailtrace compare \
   --out runs/recomputed.json
 ```
 
-Reproduction timings will differ. The package source in this repository matches the
-recorded SHA-256 above. A second
+Reproduction timings will differ. The package source at the `v0.1.0` tag matches the
+recorded SHA-256 above. Use that tag for exact source reproduction; version 0.2 adds a
+fleet planner and extra manifest fields. These earlier timings do not validate that planner.
+A second
 earlier local smoke run at a dirty development snapshot also had an interval spanning
 1 (about 0.90–1.15×); it is not used for this clean-snapshot report.
