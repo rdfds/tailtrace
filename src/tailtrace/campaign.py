@@ -18,7 +18,8 @@ from tailtrace.scheduler import schedule
 def cases(seeds):
     for seed in seeds:
         for world in (2, 3):
-            n = world * 3
+            batch_size = 3 if world == 2 else 4
+            n = world * batch_size
             rng = random.Random(seed)
             distributions = {
                 "flat": [32] * n,
@@ -48,6 +49,7 @@ def cases(seeds):
                         "distribution": name,
                         "fleet": fleet_name,
                         "seed": seed,
+                        "batch_size": batch_size,
                         "lengths": lengths,
                         "models": [m.to_dict() for m in models],
                     }
@@ -56,13 +58,15 @@ def cases(seeds):
 def evaluate(case, node_budget):
     lengths = case["lengths"]
     models = [RankCost(**m) for m in case["models"]]
-    baseline_plan = plan_epoch(lengths, len(models), 3, case["seed"], "random")[0]
+    baseline_plan = plan_epoch(lengths, len(models), case["batch_size"], case["seed"], "random")[0]
     ids = [i for g in baseline_plan.ranks for i in g]
     schedules = {}
     for name in ("random", "balanced", "fleet_greedy", "fleet_local", "fleet_beam"):
         try:
             if name in {"random", "balanced"}:
-                groups = plan_epoch(lengths, len(models), 3, case["seed"], name)[0].ranks
+                groups = plan_epoch(lengths, len(models), case["batch_size"], case["seed"], name)[
+                    0
+                ].ranks
             else:
                 groups = schedule(
                     ids,
