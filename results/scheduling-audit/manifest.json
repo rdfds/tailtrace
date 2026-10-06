@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "evidence": "analytic_proxy",
+  "command": "tailtrace schedule-audit --seeds 17 23 31 43 47 59 61 73 --node-budget 100000 --out results/scheduling-audit",
+  "source": {
+    "created_utc": "2026-10-07T01:15:14.938594+00:00",
+    "python": "3.13.0",
+    "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+    "git_commit": "b5e428bc6b9a45dd15f21852b9c81ae72ddeda79",
+    "git_dirty": true,
+    "hostname": "cpu-validation-host",
+    "source_sha256": "cde19594e01b35645c98c84eb9e035a28fc7d5548092558f93a012d60fb5e376"
+  }
+}
