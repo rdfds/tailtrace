@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "evidence": "observed",
+  "pairs": [
+    {
+      "seed": 17,
+      "baseline": "results/cpu-laptop/seed-17-baseline",
+      "candidate": "results/cpu-laptop/seed-17-candidate",
+      "interventions": [
+        "planner"
+      ],
+      "speedup": 0.813031566813517,
+      "baseline_median_ms": 3.542937498423271,
+      "candidate_median_ms": 4.357687503215857,
+      "baseline_tokens_per_second": 62744.8173658947,
+      "candidate_tokens_per_second": 46568.11080267185
+    },
+    {
+      "seed": 23,
+      "baseline": "results/cpu-laptop/seed-23-baseline",
+      "candidate": "results/cpu-laptop/seed-23-candidate",
+      "interventions": [
+        "planner"
+      ],
+      "speedup": 1.4366442119792056,
+      "baseline_median_ms": 4.963396000675857,
+      "candidate_median_ms": 3.4548539988463745,
+      "baseline_tokens_per_second": 36126.923195598116,
+      "candidate_tokens_per_second": 61568.30636605258
+    },
+    {
+      "seed": 31,
+      "baseline": "results/cpu-laptop/seed-31-baseline",
+      "candidate": "results/cpu-laptop/seed-31-candidate",
+      "interventions": [
+        "planner"
+      ],
+      "speedup": 0.900688751165646,
+      "baseline_median_ms": 3.563312493497506,
+      "candidate_median_ms": 3.9562085003126413,
+      "baseline_tokens_per_second": 56782.67240190291,
+      "candidate_tokens_per_second": 44057.70127385126
+    }
+  ],
+  "geometric_mean_speedup": 1.0170534829047653,
+  "seed_bootstrap_95_ci": [
+    0.813031566813517,
+    1.4366442119792056
+  ],
+  "independent_pairs": 3,
+  "instrumented": false,
+  "interpretation": "interval includes no improvement",
+  "limitations": [
+    "Bootstrap resamples run seeds, not correlated training steps.",
+    "Order, thermal drift, and contention require randomized alternating runs.",
+    "A speedup is not evidence of equivalent gradients; run correctness tests separately.",
+    "Multiple changed settings estimate the joint intervention, not individual causes."
+  ]
+}

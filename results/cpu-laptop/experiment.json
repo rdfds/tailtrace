@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "provenance": {
+    "created_utc": "2026-10-06T18:10:51.819356+00:00",
+    "python": "3.13.0",
+    "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+    "git_commit": "4def1133b003aa958cf5989ce58f9c09f8aa5072",
+    "git_dirty": false,
+    "hostname": "host-16c0172f7d22",
+    "source_sha256": "34d2c7a42169b987a06cc7f4921a20834c06648945d0d908defd7cbe685f2da5"
+  },
+  "workers": 2,
+  "seeds": [
+    17,
+    23,
+    31
+  ],
+  "intervention": {
+    "planner": "balanced"
+  },
+  "runs": [
+    {
+      "seed": 17,
+      "arm": "baseline",
+      "returncode": 0,
+      "path": "results/cpu-laptop/seed-17-baseline"
+    },
+    {
+      "seed": 17,
+      "arm": "candidate",
+      "returncode": 0,
+      "path": "results/cpu-laptop/seed-17-candidate"
+    },
+    {
+      "seed": 23,
+      "arm": "baseline",
+      "returncode": 0,
+      "path": "results/cpu-laptop/seed-23-baseline"
+    },
+    {
+      "seed": 23,
+      "arm": "candidate",
+      "returncode": 0,
+      "path": "results/cpu-laptop/seed-23-candidate"
+    },
+    {
+      "seed": 31,
+      "arm": "candidate",
+      "returncode": 0,
+      "path": "results/cpu-laptop/seed-31-candidate"
+    },
+    {
+      "seed": 31,
+      "arm": "baseline",
+      "returncode": 0,
+      "path": "results/cpu-laptop/seed-31-baseline"
+    }
+  ],
+  "public_export": {
+    "redactions": [
+      "hostname pseudonyms",
+      "relative paths",
+      "log path removed"
+    ],
+    "metric_values_changed": false
+  }
+}

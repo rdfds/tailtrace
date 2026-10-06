@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>TailTrace evidence report</title>
+<style>body{margin:0;background:#101722;color:#e7edf5;font:16px system-ui;padding:48px;max-width:1200px;margin:auto}
+h1{font-size:42px;margin-bottom:8px}p,small{color:#aebed0}.cards{display:flex;flex-wrap:wrap;gap:12px;margin:28px 0}
+.card{background:#1a2636;border:1px solid #314359;border-radius:12px;padding:20px;min-width:160px}
+small,strong{display:block}strong{font-size:24px;margin-top:10px}table{border-collapse:collapse;font-size:13px;width:100%}
+th,td{text-align:left;border-bottom:1px solid #314359;padding:10px}.scroll{overflow:auto}li{margin:10px 0}
+pre{background:#1a2636;padding:20px;overflow:auto}@media(max-width:600px){body{padding:20px}}</style>
+<h1>TailTrace</h1><p>Evidence for distributed training tail latency · schema 1</p>
+<div class="cards"><div class="card"><small>evidence</small><strong>observed</strong></div><div class="card"><small>geometric mean speedup</small><strong>1.017</strong></div><div class="card"><small>independent pairs</small><strong>3</strong></div><div class="card"><small>interpretation</small><strong>interval includes no improvement</strong></div></div><h2>Measurement limits</h2><ul><li>Bootstrap resamples run seeds, not correlated training steps.</li><li>Order, thermal drift, and contention require randomized alternating runs.</li><li>A speedup is not evidence of equivalent gradients; run correctness tests separately.</li><li>Multiple changed settings estimate the joint intervention, not individual causes.</li></ul>
+<h2>Evidence rows</h2><div class="scroll"><table><tr><th>seed</th><th>baseline</th><th>candidate</th><th>interventions</th><th>speedup</th><th>baseline_median_ms</th><th>candidate_median_ms</th><th>baseline_tokens_per_second</th><th>candidate_tokens_per_second</th></tr><tr><td>17</td><td>results/cpu-laptop/seed-17-baseline</td><td>results/cpu-laptop/seed-17-candidate</td><td>[&#x27;planner&#x27;]</td><td>0.813031566813517</td><td>3.542937498423271</td><td>4.357687503215857</td><td>62744.8173658947</td><td>46568.11080267185</td></tr><tr><td>23</td><td>results/cpu-laptop/seed-23-baseline</td><td>results/cpu-laptop/seed-23-candidate</td><td>[&#x27;planner&#x27;]</td><td>1.4366442119792056</td><td>4.963396000675857</td><td>3.4548539988463745</td><td>36126.923195598116</td><td>61568.30636605258</td></tr><tr><td>31</td><td>results/cpu-laptop/seed-31-baseline</td><td>results/cpu-laptop/seed-31-candidate</td><td>[&#x27;planner&#x27;]</td><td>0.900688751165646</td><td>3.563312493497506</td><td>3.9562085003126413</td><td>56782.67240190291</td><td>44057.70127385126</td></tr></table></div>
+<details><summary>Full reproducible payload</summary><pre>{
+  &quot;schema_version&quot;: 1,
+  &quot;evidence&quot;: &quot;observed&quot;,
+  &quot;pairs&quot;: [
+    {
+      &quot;seed&quot;: 17,
+      &quot;baseline&quot;: &quot;results/cpu-laptop/seed-17-baseline&quot;,
+      &quot;candidate&quot;: &quot;results/cpu-laptop/seed-17-candidate&quot;,
+      &quot;interventions&quot;: [
+        &quot;planner&quot;
+      ],
+      &quot;speedup&quot;: 0.813031566813517,
+      &quot;baseline_median_ms&quot;: 3.542937498423271,
+      &quot;candidate_median_ms&quot;: 4.357687503215857,
+      &quot;baseline_tokens_per_second&quot;: 62744.8173658947,
+      &quot;candidate_tokens_per_second&quot;: 46568.11080267185
+    },
+    {
+      &quot;seed&quot;: 23,
+      &quot;baseline&quot;: &quot;results/cpu-laptop/seed-23-baseline&quot;,
+      &quot;candidate&quot;: &quot;results/cpu-laptop/seed-23-candidate&quot;,
+      &quot;interventions&quot;: [
+        &quot;planner&quot;
+      ],
+      &quot;speedup&quot;: 1.4366442119792056,
+      &quot;baseline_median_ms&quot;: 4.963396000675857,
+      &quot;candidate_median_ms&quot;: 3.4548539988463745,
+      &quot;baseline_tokens_per_second&quot;: 36126.923195598116,
+      &quot;candidate_tokens_per_second&quot;: 61568.30636605258
+    },
+    {
+      &quot;seed&quot;: 31,
+      &quot;baseline&quot;: &quot;results/cpu-laptop/seed-31-baseline&quot;,
+      &quot;candidate&quot;: &quot;results/cpu-laptop/seed-31-candidate&quot;,
+      &quot;interventions&quot;: [
+        &quot;planner&quot;
+      ],
+      &quot;speedup&quot;: 0.900688751165646,
+      &quot;baseline_median_ms&quot;: 3.563312493497506,
+      &quot;candidate_median_ms&quot;: 3.9562085003126413,
+      &quot;baseline_tokens_per_second&quot;: 56782.67240190291,
+      &quot;candidate_tokens_per_second&quot;: 44057.70127385126
+    }
+  ],
+  &quot;geometric_mean_speedup&quot;: 1.0170534829047653,
+  &quot;seed_bootstrap_95_ci&quot;: [
+    0.813031566813517,
+    1.4366442119792056
+  ],
+  &quot;independent_pairs&quot;: 3,
+  &quot;instrumented&quot;: false,
+  &quot;interpretation&quot;: &quot;interval includes no improvement&quot;,
+  &quot;limitations&quot;: [
+    &quot;Bootstrap resamples run seeds, not correlated training steps.&quot;,
+    &quot;Order, thermal drift, and contention require randomized alternating runs.&quot;,
+    &quot;A speedup is not evidence of equivalent gradients; run correctness tests separately.&quot;,
+    &quot;Multiple changed settings estimate the joint intervention, not individual causes.&quot;
+  ]
+}</pre></details></html>
