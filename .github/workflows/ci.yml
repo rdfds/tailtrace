@@ -17,6 +17,23 @@ jobs:
       - run: ruff format --check src tests
       - run: pytest -m 'not cuda and not ray and not spark'
       - run: tailtrace demo --out runs/demo
+      - run: tailtrace schedule-audit --seeds 17 23 31 43 47 59 61 73 --out runs/scheduling-audit
+      - name: Verify committed oracle evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          actual = json.loads(Path('runs/scheduling-audit/campaign.json').read_text())
+          expected = json.loads(Path('results/scheduling-audit/campaign.json').read_text())
+          assert actual == expected, 'committed campaign no longer reproduces'
+          PY
+      - run: tailtrace calibrate --config configs/cpu-baseline.json --repeats 3 --out runs/calibration
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cpu-evidence
+          path: |
+            runs/scheduling-audit
+            runs/calibration
   ray:
     runs-on: ubuntu-latest
     timeout-minutes: 15
