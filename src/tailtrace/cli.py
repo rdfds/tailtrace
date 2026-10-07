@@ -12,6 +12,24 @@ def main():
         prog="tailtrace", description="Distributed training evidence lab"
     )
     commands = parser.add_subparsers(dest="command", required=True)
+    corpus = commands.add_parser("corpus-build", help="build immutable UTF-8 byte-token shards")
+    corpus.add_argument("inputs", nargs="+")
+    corpus.add_argument("--out", required=True)
+    corpus.add_argument("--max-length", type=int, default=128)
+    corpus.add_argument("--min-length", type=int, default=2)
+    planner_bench = commands.add_parser(
+        "planner-bench", help="measure identical local-search implementations"
+    )
+    planner_bench.add_argument("--out", required=True)
+    planner_bench.add_argument("--repeats", type=int, default=7)
+    planner_bench.add_argument("--rounds", type=int, default=3)
+    planner_bench.add_argument("--seed", type=int, default=17)
+    recovery = commands.add_parser(
+        "recovery-audit", help="inject a real two-rank CPU process crash and verify recovery"
+    )
+    recovery.add_argument("--config", required=True)
+    recovery.add_argument("--out", required=True)
+    recovery.add_argument("--fault-step", type=int, default=2)
     demo = commands.add_parser("demo", help="generate a labeled synthetic offline example")
     demo.add_argument("--out", default="runs/demo")
     train = commands.add_parser("train", help="train under Python or torchrun")
@@ -68,6 +86,36 @@ def main():
     benchmark.add_argument("--dtype", choices=["float32", "float16", "bfloat16"], default="float32")
     benchmark.add_argument("--out", required=True)
     args = parser.parse_args()
+    if args.command == "recovery-audit":
+        from tailtrace.config import TrainConfig
+        from tailtrace.recovery import audit
+
+        data = audit(TrainConfig.load(args.config), args.out, args.fault_step)
+        print(json.dumps(data["comparison"], indent=2))
+        return
+    if args.command == "planner-bench":
+        from tailtrace.planner_bench import benchmark
+
+        data = benchmark(args.out, args.repeats, args.rounds, args.seed)
+        print(
+            json.dumps(
+                [
+                    {k: c[k] for k in ("world_size", "samples", "median_ms", "median_ratio")}
+                    for c in data["cases"]
+                ],
+                indent=2,
+            )
+        )
+        return
+    if args.command == "corpus-build":
+        from tailtrace.corpus import build_corpus
+
+        print(
+            json.dumps(
+                build_corpus(args.inputs, args.out, args.max_length, args.min_length), indent=2
+            )
+        )
+        return
     if args.command == "schedule-audit":
         from pathlib import Path
 
