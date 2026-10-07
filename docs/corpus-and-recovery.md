@@ -65,6 +65,11 @@ does not test failure during writes, physical machine loss, elastic world sizes,
 partitions, CUDA, or FSDP2. The short text fixture establishes recovery correctness,
 not model quality or speed.
 
+Version 0.4 separately tests loss inside a checkpoint write and corruption of a
+committed shard. It adds durable metrics and automatic verified fallback; see
+[reliability contracts](reliability.md) and [the retained proof](../results/fault-recovery-cpu/README.md).
+The scope above describes the original after-save experiment.
+
 ## Planner timing
 
 Initial planning (including fleet validation) and subsequent epoch planning have

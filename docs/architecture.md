@@ -34,8 +34,11 @@ optimality or real-time improvement.
 
 Padding, MLP cost, vocabulary projections, kernel selection, collective timing, and
 launch overhead complicate the relationship between this proxy and wall time. The
-planner is homogeneous: it does not currently calibrate different GPU speeds. Its
-sample-count bound does not prove a model will fit in GPU memory.
+baseline planner is homogeneous. The fleet planner additionally fits isolated per-rank
+quadratic/linear/overhead compute models, applies declared physical-rank shape caps,
+and uses beam construction plus incremental moves/swaps. An independent certificate
+checks assignments; a budgeted exact oracle establishes small-case proxy optimality.
+Declared caps and sample-count bounds do not independently prove GPU memory feasibility.
 
 ## Objective preservation
 
@@ -64,15 +67,21 @@ transformer block and then the root, before constructing the optimizer. Activati
 checkpointing can be enabled as an explicit intervention.
 
 Distributed Checkpoint stores canonical model and optimizer state. `complete.json` is
-written after all shard writes finish; incomplete directories cannot be resumed.
+written after all shard writes finish and every storage file is hashed. Incomplete or
+corrupted directories cannot pass schema-2 restore preflight. `--resume-latest` chooses
+the highest verified compatible candidate and records rejected alternatives.
 Recovery requires the same world size and workload/model settings. It restores the
 global step and recomputes epoch permutations. Synthetic tokens are sample-ID seeded,
 so the model's deterministic execution needs no mutable dataset cursor or dropout RNG.
 Elastic world-size recovery and automatic failure retries are outside the current scope.
 
-Rank zero collects JSONL metrics and hardware metadata. A shared filesystem is required
-for multi-node checkpoints and trace files. Metrics/timers are buffered for a bounded
-experiment and collected at the end; this is not a streaming production trainer.
+Each rank writes its own durable JSONL journal. Rank zero gathers constant-size hardware,
+timing, and progress metadata; full metric rows never pass through that collective.
+The default buffer holds at most 32 rows/loss scalars/event pairs. Automatic summaries
+stream those journals and use disk-backed exact quantiles. A shared filesystem is
+required for multi-node metrics, checkpoints, and trace files. Separate logical agents
+are validated on one host; physical multi-host behavior remains unvalidated. See
+[the reliability protocol](reliability.md).
 
 ## CUDA residual RMSNorm
 
@@ -98,12 +107,14 @@ performance superiority has been demonstrated.
 ## Timing and trace semantics
 
 CPU timing uses wall duration. CUDA step timing uses events on the active stream,
-including GPU idle gaps from host scheduling; events are read after one final sync.
-There is no `.item()` or diagnostic synchronization in the default training loop.
+including GPU idle gaps from host scheduling. Bounded telemetry synchronizes the last
+buffered end event and materializes scalar losses every configured cadence, then records
+that instrumentation. `metrics_flush_every=0` defers event/scalar reads until final sync
+for a short throughput diagnostic, relinquishing bounded buffering and crash coverage.
 Peak allocated memory is cumulative over the run. Summary step time is the **maximum
 rank-local duration**, which avoids requiring synchronized clocks but is not an exact
 cross-host global critical path. Throughput excludes warmup, planner work between steps,
-checkpoint I/O, and final reporting; `training_loop_wall_ms` includes work in the loop.
+checkpoint I/O, periodic journal flush work, and final reporting; `training_loop_wall_ms` includes work in the loop.
 
 Trace analysis unions compute, NCCL, and copy intervals within each rank's step range.
 `exposed_collective = NCCL union − intersection(NCCL union, compute union)`.

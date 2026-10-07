@@ -9,7 +9,9 @@
 | Causal transformer / token objective | CPU gradients passed | Mixed-precision accuracy on GPU |
 | Real two-rank DDP | Gloo fp64 gradients + AdamW updates passed | NCCL multi-node run |
 | Checkpoint recovery | Exact CPU next update and mid-epoch resume passed | FSDP2 shard recovery on GPU |
-| Process crash / real text | Actual rank exit, restart, and bitwise model/AdamW proof | Mid-write loss, machine loss, and elastic recovery |
+| Process crash / real text | Actual after-save and mid-write exits, corrupt-checkpoint fallback, bitwise model/AdamW proofs | Machine loss, remote storage and elastic recovery |
+| Telemetry / reporting | Durable crash frontiers, bounded buffering, exact streamed quantiles, measured memory growth | Long GPU runs and remote storage behavior |
+| Logical node agents | Two independent torchrun node agents, bitwise CPU state equivalence | Physical multi-host networking and NCCL |
 | Incremental local search | 120 differential cases and four paired CPU timing cases | GPU training overhead/benefit |
 | Kineto profiling | Actual CPU trace export and analysis passed | Real CUDA trace capture |
 | Nsight SQLite adapter | Generated schema fixtures passed | Versioned NVIDIA-exported fixtures |
@@ -22,11 +24,16 @@ passed CPU, Ray, and Spark jobs. The current workflow also reproduces all 384 sc
 cases and retains CPU calibration artifacts. GPU validation remains separate; a passing
 CPU workflow does not validate CUDA kernels or FSDP2.
 
-Version 0.3 is validated locally and skips hosted CI to avoid paid compute minutes.
+Versions 0.3 and 0.4 are validated locally and skip hosted CI to avoid paid compute minutes.
 The badge and earlier hosted run do not certify this version. Raw local evidence is
 in [planner measurements](../results/planner-cpu/README.md) and
 [process recovery](../results/recovery-cpu/README.md); the published recovery test
 reloads the retained final distributed checkpoints and reproduces the state hash.
+
+The v0.4 reliability proofs retain raw logs and checkpoints and are independently
+reloaded by `tests/test_published_reliability.py`. See [failure protocols](reliability.md). The [local validation record](../results/validation-v04/README.md)
+retains the 116-test CPU suite and separate two-worker Ray test. The
+[Ray run](../results/ray-streaming-cpu/README.md) enables per-step flushes and a sealed save.
 
 ## Run the local correctness suite
 
@@ -143,7 +150,10 @@ tailtrace analyze runs/nsys/rank0-chrome.json --rank 0 --out runs/nsys/rank0-ana
 
 Prefer **either** Kineto or Nsight per diagnostic capture: set `profile=false` in a
 copy of the Nsight configuration to avoid CUPTI subscriber conflicts. Keep `nvtx=true`
-and `diagnostic_sync=true`. Throughput experiments should disable all three flags.
+and `diagnostic_sync=true`. Throughput experiments should disable all three flags. For a short uninstrumented
+telemetry capture, also set `metrics_flush_every=0`; this buffers the run and gives up
+crash progress. The paired baseline configs set it explicitly. Bounded mid-loop flushes
+are instrumentation and their wall time is recorded separately.
 
 For individual kernels, use Nsight Compute after compiling the extension:
 

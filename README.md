@@ -21,6 +21,14 @@ incremental scheduler. [Paired CPU measurements](results/planner-cpu/README.md) 
 The [process recovery experiment](results/recovery-cpu/README.md) kills one rank after
 a checkpoint and checks bitwise equality of the final model and full AdamW state.
 
+Version 0.4 adds bounded durable telemetry and storage-sealed checkpoint recovery.
+The [interrupted-write experiment](results/fault-recovery-cpu/README.md) recovers from
+both a partial DCP write and a corrupted checkpoint, reproducing all model/AdamW state
+bitwise. [Separate logical-node agents](results/logical-nodes-cpu/README.md) also match
+the reference. [Measured report memory](results/telemetry-memory-cpu/README.md) remains
+near **0.18 MiB of Python allocations across 2,000–100,000 generated rank rows**;
+exact percentile aggregation uses disk storage. These are CPU systems results.
+
 This is experimental systems software. CUDA and multi-node results are **not yet
 validated on NVIDIA hardware**. The repository includes executable CPU experiments,
 correctness tests, and hardware validation instructions.
@@ -86,10 +94,11 @@ the offline tools does not load any of these runtimes.
 | Real data | UTF-8 byte shards, read-only memory maps, overlapping windows, target accounting, content identities |
 | Distributed training | Causal transformer, token-weighted loss, DDP/FSDP2, bf16, activation checkpointing, torchrun/Slurm launch |
 | CUDA | C++/CUDA residual-RMSNorm forward/backward, fp32 accumulation, deterministic two-pass weight reduction, current-stream support |
-| Recovery | Distributed checkpoints, synced completion markers, real rank-crash audit, exact model/AdamW recovery, dataset/fleet guards |
+| Recovery | Storage-sealed DCP, compatible fallback selection, actual partial-write/corruption audits, exact model/AdamW recovery |
+| Long-run telemetry | Bounded rank journals, durable byte frontiers, crash inspection, streaming summaries with exact disk-backed quantiles |
 | Profiling | Kineto, NVTX, Nsight SQLite adapter, interval unions, exposed collective occupancy and copy/compute overlap |
 | Experiments | Randomized paired arms, protocol/hardware/source guards, bootstrap across independent seeds, offline HTML reports |
-| Cluster orchestration | Ray Train reuses the same loop and global planner; local object store is bounded |
+| Cluster orchestration | Ray Train shares the training loop; separate logical torchrun agents verified on one CPU host |
 | Experiment warehouse | Spark validates rank coverage and aggregates separate runs into Parquet |
 
 ## Evidence, not promises
@@ -105,14 +114,32 @@ Current CI additionally reproduces the entire oracle campaign and uploads fresh 
 calibration evidence. CUDA/FSDP2 and multi-node execution need NVIDIA validation.
 Component status and launch notes are documented in [validation](docs/validation.md).
 
-The v0.3 updates are validated locally; hosted CI was intentionally skipped to avoid
-spending compute minutes. The existing badge reflects the last hosted run, not v0.3.
+The v0.3 and v0.4 updates are validated locally; hosted CI was intentionally skipped
+to avoid spending compute minutes. The badge reflects the last hosted run.
 The text and recovery experiment runs entirely on a CPU laptop:
 
 ```bash
 tailtrace corpus-build examples/corpus --max-length 128 --out runs/text-corpus
 tailtrace recovery-audit --config configs/cpu-recovery.json --fault-step 2 --out runs/recovery
 ```
+
+The deeper failure and logical-node experiments are also entirely local:
+
+```bash
+tailtrace fault-audit --config configs/cpu-recovery.json --out runs/fault-proof
+tailtrace node-audit --config configs/cpu-recovery.json --out runs/node-proof
+tailtrace inspect-run runs/fault-proof/failed --out runs/fault-proof/inspection.json
+tailtrace metrics-bench --out runs/report-memory
+```
+
+Local validation records **116 CPU tests plus the actual two-worker Ray Train test**.
+The [retained Ray run](results/ray-streaming-cpu/README.md) exercises per-step journal
+flushes and a sealed DCP save. [Raw validation logs](results/validation-v04/README.md)
+record the tested commands and source identity.
+
+Read [durability, compatibility, and instrumentation contracts](docs/reliability.md).
+The bounded telemetry default marks mid-loop flushes as instrumentation. Short paired
+throughput configs explicitly defer collection with `metrics_flush_every=0`.
 
 See [reader and failure contracts](docs/corpus-and-recovery.md) for the exact tested
 failure window, immutable-data rules, and shared-filesystem requirements for Ray.
@@ -159,5 +186,6 @@ variable-length workload imbalance. TailTrace focuses on checkable assignments,
 oracle gaps, objective equivalence, and reproducible evidence. See the
 [0.2 release notes](docs/release-v0.2.md) for the new interfaces and compatibility scope.
 The [0.3 release notes](docs/release-v0.3.md) cover text, recovery, and planner overhead.
+The [0.4 release notes](docs/release-v0.4.md) cover failure protocols and bounded reporting.
 
 MIT licensed. See [architecture](docs/architecture.md) and [validation](docs/validation.md).

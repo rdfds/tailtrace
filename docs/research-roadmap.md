@@ -24,7 +24,8 @@ could show different behavior, but that must be measured.
   remains open. Do not fit pure compute from NCCL-inclusive steps.
 * Extend the immutable byte shards and exact CPU process recovery audit to multi-node
   shared storage. Real text, dataset identity guards, and mid-epoch CPU recovery are
-  implemented; process loss during a checkpoint write needs a separate fault test.
+  implemented. Partial DCP writes, corrupt-checkpoint fallback, and two logical node
+  agents are now verified on one CPU host; physical multi-host storage remains open.
 * Add packed/variable-length attention as a separately controlled intervention. It changes
   the padded-attention cost model; do not silently keep the current proxy.
 * Verify FSDP2 mixed precision and sharded checkpoint recovery on multi-node hardware.
@@ -32,4 +33,5 @@ could show different behavior, but that must be measured.
   PyTorch and existing fused implementations, including adverse shapes.
 * Expand the Nsight adapter with versioned real fixtures and runtime/kernel correlation
   for queue delays. Do not assume cross-host clocks share an origin.
-* Implement bounded streaming metrics for long jobs and robust crash manifests.
+* Validate the implemented bounded journals and external-quantile summaries during
+  long GPU jobs. CPU crash coverage and report memory growth are measured.
