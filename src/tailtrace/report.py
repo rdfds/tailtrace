@@ -127,10 +127,15 @@ def compare_runs(baselines: list[str], candidates: list[str], bootstrap: int = 4
         for m in (a, b):
             if m["config"].get("planner") == "fleet" and not m.get("fleet", {}).get("sha256"):
                 raise ValueError("fleet runs require a recorded profile content hash")
+            if m["config"].get("dataset_path") and not (m.get("dataset") or {}).get("sha256"):
+                raise ValueError("corpus runs require a recorded dataset content hash")
+        if a.get("dataset") != b.get("dataset"):
+            raise ValueError("paired runs loaded different dataset contents")
         pair_protocol = [
             {
                 "config": {k: v for k, v in m["config"].items() if k != "seed"},
                 "fleet": m.get("fleet"),
+                "dataset": m.get("dataset"),
             }
             for m in (a, b)
         ]

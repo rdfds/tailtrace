@@ -62,13 +62,18 @@ class CausalTransformer(nn.Module):
         return self.output(x)
 
 
-def make_batch(ids, lengths, vocab_size, seed, device):
+def make_batch(ids, lengths, vocab_size, seed, device, corpus=None):
     t = max(lengths[i] - 1 for i in ids)
     x = torch.zeros((len(ids), t), dtype=torch.long)
     target = torch.full_like(x, -100)
     for row, i in enumerate(ids):
-        g = torch.Generator().manual_seed(seed * 1000003 + i)
-        seq = torch.randint(vocab_size, (lengths[i],), generator=g)
+        if corpus is None:
+            g = torch.Generator().manual_seed(seed * 1000003 + i)
+            seq = torch.randint(vocab_size, (lengths[i],), generator=g)
+        else:
+            seq = torch.tensor(list(corpus[i]), dtype=torch.long)
+            if len(seq) != lengths[i]:
+                raise ValueError("corpus sequence length differs from planned length")
         x[row, : lengths[i] - 1] = seq[:-1]
         target[row, : lengths[i] - 1] = seq[1:]
     if device.type == "cuda":

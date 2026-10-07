@@ -108,3 +108,14 @@ def test_fleet_content_cannot_drift_across_seed_pairs(tmp_path):
         candidates.append(str(b))
     with pytest.raises(ValueError, match="settings differ"):
         compare_runs(bases, candidates)
+
+
+def test_paired_dataset_content_must_match(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    for path, planner, sha in ((a, "random", "one"), (b, "balanced", "two")):
+        data = fixture_run(path, 1, planner)
+        data["config"]["dataset_path"] = "same/path"
+        data["dataset"] = {"sha256": sha, "codec": "utf8_bytes"}
+        atomic_json(path / "manifest.json", data)
+    with pytest.raises(ValueError, match="different dataset contents"):
+        compare_runs([str(a)], [str(b)])

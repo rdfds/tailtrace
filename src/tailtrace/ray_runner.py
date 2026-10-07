@@ -32,6 +32,11 @@ def launch(args):
     from ray.train.torch import TorchConfig, TorchTrainer
 
     config = TrainConfig.load(args.config)
+    if config.dataset_path:
+        dataset_path = Path(config.dataset_path).resolve()
+        if not (dataset_path / "manifest.json").is_file():
+            raise FileNotFoundError(f"dataset manifest is missing: {dataset_path}")
+        config = replace(config, dataset_path=str(dataset_path))
     if config.fleet_path:
         # Workers run from Ray's uploaded package directory, not the driver's checkout.
         # Remote nodes must mount this absolute path; arbitrary data is not uploaded.

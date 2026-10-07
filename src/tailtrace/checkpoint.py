@@ -10,7 +10,7 @@ from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_di
 from tailtrace.evidence import atomic_json
 
 
-def save(path, model, optimizer, config, world, step, rank, fleet_sha256=None):
+def save(path, model, optimizer, config, world, step, rank, fleet_sha256=None, dataset_sha256=None):
     path = Path(path)
     if (path / "complete.json").exists():
         raise FileExistsError(f"checkpoint already exists: {path}")
@@ -28,13 +28,14 @@ def save(path, model, optimizer, config, world, step, rank, fleet_sha256=None):
                 "world_size": world,
                 "config": config.to_dict(),
                 "fleet_sha256": fleet_sha256,
+                "dataset_sha256": dataset_sha256,
             },
         )
     if world > 1:
         dist.barrier()
 
 
-def restore(path, model, optimizer, config, world, fleet_sha256=None):
+def restore(path, model, optimizer, config, world, fleet_sha256=None, dataset_sha256=None):
     path = Path(path)
     if not (path / "complete.json").exists():
         raise ValueError("checkpoint has no complete.json commit marker")
@@ -43,6 +44,8 @@ def restore(path, model, optimizer, config, world, fleet_sha256=None):
         raise ValueError("checkpoint recovery currently requires the same world size")
     if metadata.get("fleet_sha256") != fleet_sha256:
         raise ValueError("checkpoint fleet profile content changed")
+    if metadata.get("dataset_sha256") != dataset_sha256:
+        raise ValueError("checkpoint dataset content changed")
     mutable = {
         "steps",
         "warmup",

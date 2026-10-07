@@ -23,6 +23,7 @@ class TrainConfig:
     strategy: str = "ddp"
     planner: str = "balanced"
     fleet_path: str | None = None
+    dataset_path: str | None = None
     kernel: str = "reference"
     device: str = "cpu"
     precision: str = "fp32"
@@ -97,6 +98,11 @@ class TrainConfig:
             raise ValueError("fleet_path must be a nonempty string")
         if (self.planner == "fleet") != (self.fleet_path is not None):
             raise ValueError("planner=fleet and fleet_path must be supplied together")
+        if self.dataset_path is not None:
+            if not isinstance(self.dataset_path, str) or not self.dataset_path:
+                raise ValueError("dataset_path must be a nonempty string")
+            if self.vocab_size != 256:
+                raise ValueError("byte corpora require vocab_size=256")
 
     @classmethod
     def load(cls, path: str | Path):

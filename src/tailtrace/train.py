@@ -24,17 +24,46 @@ def run(config: TrainConfig, out: str | Path, resume: str | None = None) -> dict
     out.mkdir(parents=True, exist_ok=True)
     device, rank, world, owned = setup(config)
     try:
-        return _run(config, out, resume, device, rank, world)
+        with contextlib.ExitStack() as resources:
+            corpus = None
+            if config.dataset_path:
+                from tailtrace.corpus import TokenCorpus
+
+                error = None
+                try:
+                    corpus = resources.enter_context(TokenCorpus(config.dataset_path))
+                    if config.samples > len(corpus):
+                        raise ValueError("samples exceeds corpus sequence count")
+                    if max(corpus.entry(i)[1] for i in range(config.samples)) > config.max_length:
+                        raise ValueError("corpus sequences exceed model max_length")
+                except (ValueError, KeyError, TypeError, OSError) as exc:
+                    error = f"rank {rank}: {exc}"
+                status = {"error": error, "sha256": corpus.sha256 if corpus else None}
+                statuses = [status]
+                if world > 1:
+                    statuses = [None] * world
+                    dist.all_gather_object(statuses, status)
+                errors = [s["error"] for s in statuses if s["error"]]
+                if errors:
+                    raise ValueError("corpus preflight failed: " + "; ".join(errors))
+                if len({s["sha256"] for s in statuses}) != 1:
+                    raise ValueError("ranks loaded different corpus contents")
+            return _run(config, out, resume, device, rank, world, corpus)
     finally:
         if owned:
             dist.destroy_process_group()
 
 
-def _run(config, out, resume, device, rank, world):
+def _run(config, out, resume, device, rank, world, corpus=None):
     origin = provenance()
     torch.set_num_threads(config.threads)
     torch.manual_seed(config.seed)
-    lengths = make_lengths(config.samples, config.min_length, config.max_length, config.seed)
+    lengths = (
+        tuple(corpus.entry(i)[1] for i in range(config.samples))
+        if corpus
+        else make_lengths(config.samples, config.min_length, config.max_length, config.seed)
+    )
+    planning_start = time.perf_counter()
     fleet = None
     if config.fleet_path:
         from tailtrace.fleet import FleetProfile
@@ -73,6 +102,7 @@ def _run(config, out, resume, device, rank, world):
         plans = plan_epoch(lengths, world, config.batch_size, config.seed, config.planner)
     if not plans:
         raise ValueError("samples must cover at least one complete global batch")
+    initial_planning_ms = (time.perf_counter() - planning_start) * 1000
     model = wrap_model(CausalTransformer(config).to(device), config, device, world)
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
     start_step = 0
@@ -80,7 +110,13 @@ def _run(config, out, resume, device, rank, world):
         from tailtrace.checkpoint import restore
 
         start_step = restore(
-            resume, model, optimizer, config, world, fleet.sha256 if fleet else None
+            resume,
+            model,
+            optimizer,
+            config,
+            world,
+            fleet.sha256 if fleet else None,
+            corpus.sha256 if corpus else None,
         )
         if start_step >= config.steps:
             raise ValueError("resume checkpoint must precede configured steps")
@@ -104,17 +140,20 @@ def _run(config, out, resume, device, rank, world):
     if world > 1:
         dist.barrier()
     wall_start = time.perf_counter()
-    current_epoch = -1
+    current_epoch = 0
+    epoch_planning_ms = 0.0
     nvtx = config.nvtx and device.type == "cuda"
     with profiler if config.profile else contextlib.nullcontext():
         for step in range(start_step, config.steps):
             # Re-shuffle at each epoch; both planners see exactly the same global batches.
             epoch, offset = divmod(step, len(plans))
             if epoch != current_epoch:
+                planning_start = time.perf_counter()
                 plans = plan_epoch(
                     lengths, world, config.batch_size, config.seed + epoch, config.planner, fleet
                 )
                 current_epoch = epoch
+                epoch_planning_ms += (time.perf_counter() - planning_start) * 1000
             plan = plans[offset]
             ids = plan.ranks[rank]
             begin = time.perf_counter()
@@ -130,7 +169,7 @@ def _run(config, out, resume, device, rank, world):
                     if rank == config.delay_rank:
                         time.sleep(config.delay_ms / 1000)
                     tokens, target = make_batch(
-                        ids, lengths, config.vocab_size, config.seed, device
+                        ids, lengths, config.vocab_size, config.seed, device, corpus
                     )
                 optimizer.zero_grad(set_to_none=True)
                 amp = (
@@ -182,6 +221,7 @@ def _run(config, out, resume, device, rank, world):
                     step + 1,
                     rank,
                     fleet.sha256 if fleet else None,
+                    corpus.sha256 if corpus else None,
                 )
     if device.type == "cuda":
         torch.cuda.synchronize()
@@ -198,7 +238,13 @@ def _run(config, out, resume, device, rank, world):
         "cuda_runtime": torch.version.cuda,
         "backend": dist.get_backend() if world > 1 else None,
     }
-    payload = {"rows": rows, "hardware": hardware, "wall_ms": wall_ms}
+    payload = {
+        "rows": rows,
+        "hardware": hardware,
+        "wall_ms": wall_ms,
+        "initial_planning_ms": initial_planning_ms,
+        "epoch_planning_ms": epoch_planning_ms,
+    }
     gathered = [None] * world
     if world > 1:
         dist.all_gather_object(gathered, payload)
@@ -217,10 +263,23 @@ def _run(config, out, resume, device, rank, world):
             "start_step": start_step,
             "resume": resume,
             "training_loop_wall_ms": max(p["wall_ms"] for p in gathered),
+            "initial_planning_ms": max(p["initial_planning_ms"] for p in gathered),
+            "epoch_planning_ms": max(p["epoch_planning_ms"] for p in gathered),
             "dropped_samples_per_epoch": config.samples % (world * config.batch_size),
             "timing": "cuda_event" if device.type == "cuda" else "cpu_wall",
             "instrumented": config.profile or config.diagnostic_sync or config.nvtx,
             "fleet": fleet.summary() if fleet else None,
+            "dataset": (
+                {
+                    "sha256": corpus.sha256,
+                    "codec": "utf8_bytes",
+                    "samples": config.samples,
+                    "corpus_samples": len(corpus),
+                    "selected_valid_tokens": sum(n - 1 for n in lengths),
+                }
+                if corpus
+                else None
+            ),
             "cost_scope": "isolated_compute_estimate" if fleet else "padded_attention_proxy",
         }
         atomic_json(out / "manifest.json", manifest)
