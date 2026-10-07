@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
+import torch
 import torch.distributed as dist
 import torch.distributed.checkpoint as dcp
 from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
 
+from tailtrace.checkpoint_index import check_compatible, seal, verify
 from tailtrace.evidence import atomic_json
 
 
@@ -15,49 +16,65 @@ def save(path, model, optimizer, config, world, step, rank, fleet_sha256=None, d
     if (path / "complete.json").exists():
         raise FileExistsError(f"checkpoint already exists: {path}")
     model_state, optim_state = get_state_dict(model, optimizer)
-    dcp.save({"model": model_state, "optimizer": optim_state}, checkpoint_id=path)
+    dcp.save(
+        {"model": model_state, "optimizer": optim_state},
+        storage_writer=dcp.FileSystemWriter(path, overwrite=False),
+    )
     # Metadata is the commit marker, written only after every rank's shards are durable.
     if world > 1:
         dist.barrier()
+    error = None
     if rank == 0:
-        atomic_json(
-            path / "complete.json",
-            {
-                "schema_version": 1,
-                "step": step,
-                "world_size": world,
-                "config": config.to_dict(),
-                "fleet_sha256": fleet_sha256,
-                "dataset_sha256": dataset_sha256,
-            },
-        )
+        try:
+            atomic_json(
+                path / "complete.json",
+                seal(
+                    path,
+                    {
+                        "step": step,
+                        "world_size": world,
+                        "torch_version": str(torch.__version__),
+                        "config": config.to_dict(),
+                        "fleet_sha256": fleet_sha256,
+                        "dataset_sha256": dataset_sha256,
+                    },
+                ),
+            )
+        except (ValueError, OSError) as exc:
+            error = str(exc)
+    errors = [error]
     if world > 1:
-        dist.barrier()
+        dist.broadcast_object_list(errors, src=0)
+    if errors[0]:
+        raise ValueError("checkpoint commit failed: " + errors[0])
 
 
 def restore(path, model, optimizer, config, world, fleet_sha256=None, dataset_sha256=None):
     path = Path(path)
-    if not (path / "complete.json").exists():
-        raise ValueError("checkpoint has no complete.json commit marker")
-    metadata = json.loads((path / "complete.json").read_text())
-    if metadata["world_size"] != world:
-        raise ValueError("checkpoint recovery currently requires the same world size")
-    if metadata.get("fleet_sha256") != fleet_sha256:
-        raise ValueError("checkpoint fleet profile content changed")
-    if metadata.get("dataset_sha256") != dataset_sha256:
-        raise ValueError("checkpoint dataset content changed")
-    mutable = {
-        "steps",
-        "warmup",
-        "profile",
-        "nvtx",
-        "profile_steps",
-        "checkpoint_every",
-        "diagnostic_sync",
-    }
-    for key, value in metadata["config"].items():
-        if key not in mutable and config.to_dict().get(key) != value:
-            raise ValueError(f"checkpoint configuration changed: {key}")
+    metadata, error = None, None
+    try:
+        metadata = verify(path)
+        check_compatible(
+            metadata,
+            config,
+            world,
+            fleet_sha256,
+            dataset_sha256,
+            require_remaining=False,
+            torch_version=str(torch.__version__),
+        )
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        error = str(exc)
+    status = {"error": error, "identity": metadata.get("sha256") if metadata else None}
+    statuses = [status]
+    if world > 1 and dist.is_initialized():
+        statuses = [None] * world
+        dist.all_gather_object(statuses, status)
+    errors = [s["error"] for s in statuses if s["error"]]
+    if errors:
+        raise ValueError("checkpoint preflight failed: " + "; ".join(errors))
+    if len({s["identity"] for s in statuses}) != 1:
+        raise ValueError("ranks loaded different checkpoint contents")
     model_state, optim_state = get_state_dict(model, optimizer)
     state = {"model": model_state, "optimizer": optim_state}
     dcp.load(state, checkpoint_id=path)

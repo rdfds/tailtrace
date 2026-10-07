@@ -40,6 +40,9 @@ def test_incomplete_checkpoint_rejected(tmp_path):
 def test_profile_hash_change_rejected_before_loading_weights(tmp_path):
     from tailtrace.evidence import atomic_json
 
-    atomic_json(tmp_path / "complete.json", {"world_size": 1, "fleet_sha256": "old", "config": {}})
+    atomic_json(
+        tmp_path / "complete.json",
+        {"schema_version": 1, "step": 1, "world_size": 1, "fleet_sha256": "old", "config": {}},
+    )
     with pytest.raises(ValueError, match="profile content changed"):
         restore(tmp_path, None, None, TrainConfig(), 1, fleet_sha256="new")
