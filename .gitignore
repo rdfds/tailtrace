@@ -11,3 +11,6 @@ runs/
 *.nsys-rep
 *.ncu-rep
 *.sqlite
+
+# Deterministic generated report fixtures; retained observations include their hashes.
+results/telemetry-memory-cpu/fixture-*/
