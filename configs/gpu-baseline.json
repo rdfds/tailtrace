@@ -12,5 +12,6 @@
   "warmup": 10,
   "width": 256,
   "heads": 8,
-  "layers": 6
+  "layers": 6,
+  "metrics_flush_every": 0
 }

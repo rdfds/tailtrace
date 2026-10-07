@@ -10,5 +10,6 @@
   "width": 32,
   "heads": 4,
   "layers": 2,
-  "batch_size": 4
+  "batch_size": 4,
+  "metrics_flush_every": 0
 }
