@@ -18,7 +18,15 @@ def atomic_json(path: str | Path, value):
         with os.fdopen(fd, "w") as f:
             json.dump(value, f, indent=2, allow_nan=False)
             f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
         os.replace(tmp, path)
+        if os.name == "posix":
+            parent = os.open(path.parent, os.O_RDONLY)
+            try:
+                os.fsync(parent)
+            finally:
+                os.close(parent)
     finally:
         Path(tmp).unlink(missing_ok=True)
 
