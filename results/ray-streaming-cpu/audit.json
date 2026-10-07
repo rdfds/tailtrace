@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "evidence": "observed_cpu",
+  "scope": "ray_two_worker_streaming_and_checkpoint",
+  "world_size": 2,
+  "physical_hosts": 1,
+  "ray": "2.59.0",
+  "source_sha256": "098b4a0f5e57e12a46d4fb08d906920a2a9d0f6241b98aa2d9c7bbbd0f1c3160",
+  "peak_buffered_rows": 1,
+  "checkpoint_step": 3,
+  "limitations": [
+    "one local CPU host",
+    "synthetic training data",
+    "no Ray cluster scaling or GPU performance claim"
+  ]
+}

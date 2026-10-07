@@ -1,0 +1,13 @@
+{
+  "device": "cpu",
+  "strategy": "ddp",
+  "steps": 3,
+  "checkpoint_every": 3,
+  "metrics_flush_every": 1,
+  "warmup": 1,
+  "width": 16,
+  "heads": 2,
+  "layers": 1,
+  "max_length": 24,
+  "min_length": 2
+}

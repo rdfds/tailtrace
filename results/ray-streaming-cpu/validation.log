@@ -1,0 +1,16 @@
+.                                                                        [100%]
+=============================== warnings summary ===============================
+tests/test_ray.py::test_two_cpu_workers
+  /tmp/tailtrace-runtime/ray/data/context.py:1149: DeprecationWarning: `use_push_based_shuffle` is deprecated! Configure `shuffle_strategy` instead.
+    warnings.warn(
+
+tests/test_ray.py::test_two_cpu_workers
+  /tmp/tailtrace-runtime/ray/data/context.py:1163: DeprecationWarning: `use_polars` is deprecated, please configure `use_polars_sort`  instead.
+    warnings.warn(
+
+tests/test_ray.py::test_two_cpu_workers
+  /tmp/tailtrace-runtime/ray/data/context.py:1171: DeprecationWarning: `use_arrow_tensor_v2` is deprecated. Configure `arrow_fixed_shape_tensor_format` instead. 
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 3 warnings in 35.16s

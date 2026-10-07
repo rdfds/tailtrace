@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "evidence": "observed",
+  "run": "/private/tmp/tailtrace-v04-evidence/ray-test/test_two_cpu_workers0/run",
+  "world_size": 2,
+  "timing": "cpu_wall",
+  "instrumented": true,
+  "measured_steps": 2,
+  "median_step_ms": 7.305542007088661,
+  "p95_step_ms": 10.195554536767304,
+  "tokens_per_second": 9034.237286700885,
+  "mean_padding_fraction": 0.37327867129191633,
+  "max_peak_memory_bytes": 0,
+  "steps": [],
+  "steps_retained": false,
+  "workload_sha256": "5404c7474d344848e3e3198cc5a37ec51bcfe2331d94d25553468fce5baf99db",
+  "quantile_method": "exact_external_sqlite_sort",
+  "limitations": [
+    "Step latency is max rank-local duration, not a clock-aligned global critical path.",
+    "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
+    "Synthetic token data exercises systems behavior; loss is not a language quality benchmark."
+  ]
+}

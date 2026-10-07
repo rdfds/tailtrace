@@ -1,0 +1,59 @@
+{
+  "step": 3,
+  "world_size": 2,
+  "torch_version": "2.8.0",
+  "config": {
+    "seed": 17,
+    "samples": 256,
+    "min_length": 2,
+    "max_length": 24,
+    "batch_size": 4,
+    "steps": 3,
+    "warmup": 1,
+    "width": 16,
+    "heads": 2,
+    "layers": 1,
+    "vocab_size": 256,
+    "lr": 0.001,
+    "strategy": "ddp",
+    "planner": "balanced",
+    "fleet_path": null,
+    "dataset_path": null,
+    "kernel": "reference",
+    "device": "cpu",
+    "precision": "fp32",
+    "bucket_cap_mb": 25,
+    "activation_checkpointing": false,
+    "profile": false,
+    "nvtx": false,
+    "profile_steps": 3,
+    "diagnostic_sync": false,
+    "checkpoint_every": 3,
+    "metrics_flush_every": 1,
+    "threads": 1,
+    "delay_rank": -1,
+    "delay_ms": 0.0
+  },
+  "fleet_sha256": null,
+  "dataset_sha256": null,
+  "schema_version": 2,
+  "model_contract_sha256": "546f0267149bce8a15936ad3ac1cd93a4bb98b6c6c918aba8cace341e925e347",
+  "files": [
+    {
+      "path": ".metadata",
+      "bytes": 14010,
+      "sha256": "4a2460542caac27195685d557032bf0384be4762a2be6daab90409e34a8198ff"
+    },
+    {
+      "path": "__0_0.distcp",
+      "bytes": 122036,
+      "sha256": "13a24612516f60c68ea6b22a518a01246b89b6bc033492d3d0e5c5a39dbb0c78"
+    },
+    {
+      "path": "__1_0.distcp",
+      "bytes": 90220,
+      "sha256": "be6f29b4b3c86c76db1ae1d9110dae199177154be9f3c749f147440d2772174e"
+    }
+  ],
+  "sha256": "af2eb5aa5701e1f2a1a9c89db01b463b805c22141bc93d451da8de2698392606"
+}

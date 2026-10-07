@@ -106,3 +106,19 @@ def test_retained_report_memory_inputs_and_aggregates_regenerate(tmp_path):
             case["python_peak_ratio"]
             == retained["python_peak_bytes"] / external["python_peak_bytes"]
         )
+
+
+def test_retained_ray_journals_and_checkpoint_are_content_valid():
+    root = ROOT / "ray-streaming-cpu"
+    proof = json.loads((root / "audit.json").read_text())
+    manifest = json.loads((root / "run/manifest.json").read_text())
+    assert manifest["world_size"] == proof["world_size"] == 2
+    assert manifest["telemetry"]["peak_buffered_rows"] == proof["peak_buffered_rows"] == 1
+    assert all(h["source_sha256"] == proof["source_sha256"] for h in manifest["hardware"])
+    assert inspect_run(root / "run")["durable_through_step"] == 2
+    marker = verify(root / "run/checkpoint-3", require_sealed=True)
+    assert marker["step"] == 3 and marker["config"]["metrics_flush_every"] == 1
+    actual = summarize_run(root / "run", retain_steps=False)
+    expected = json.loads((root / "run/summary.json").read_text())
+    for key in ("median_step_ms", "p95_step_ms", "workload_sha256", "measured_steps"):
+        assert actual[key] == expected[key]

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "rank": 0,
+  "start_step": 0,
+  "last_step": 2,
+  "rows": 3,
+  "bytes": 911,
+  "sha256": "600e8cc48a3cb13accf4cdb4bb169939a9e731e20ff66eb4f8d1ae6154a0bec8",
+  "flushes": 3,
+  "complete": true
+}
