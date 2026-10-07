@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "evidence": "observed_cpu",
+  "scope": "partial_write_and_corrupt_checkpoint_recovery",
+  "world_size": 2,
+  "physical_hosts": 1,
+  "partial_write_step": 4,
+  "exitcode": 88,
+  "partial_shard_bytes": 4096,
+  "corruption": {
+    "path": "failed/checkpoint-3/__1_0.distcp",
+    "offset": 0,
+    "before_byte": 80,
+    "after_byte": 81,
+    "before_sha256": "e002c575566733ee57a06441961719d0e541cf0b9b75b63d530ab0f458f85e57",
+    "after_sha256": "dffaa77fcdb4df97b75a5fc8525f48343c9bb3b7448b386301dcd3febc67a27d",
+    "committed_step": 3
+  },
+  "selection": {
+    "path": "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/failed/checkpoint-2",
+    "step": 2,
+    "sha256": "d22a7d1e558ace185b5ae87b1840a84cd06b58de3f3919be7cb54582c5b974b1",
+    "candidates": [
+      {
+        "path": "checkpoint-1",
+        "step": 1,
+        "status": "eligible"
+      },
+      {
+        "path": "checkpoint-2",
+        "step": 2,
+        "status": "eligible"
+      },
+      {
+        "path": "checkpoint-3",
+        "status": "rejected",
+        "reason": "checkpoint storage content changed: __1_0.distcp"
+      },
+      {
+        "path": "checkpoint-4",
+        "status": "rejected",
+        "reason": "checkpoint has no complete.json commit marker"
+      }
+    ]
+  },
+  "telemetry": {
+    "schema_version": 1,
+    "evidence": "observed",
+    "status": "partial",
+    "world_size": 2,
+    "durable_through_step": 3,
+    "ranks": [
+      {
+        "rank": 0,
+        "status": "partial",
+        "rows": 4,
+        "last_step": 3,
+        "start_step": 0,
+        "bytes": 1220
+      },
+      {
+        "rank": 1,
+        "status": "partial",
+        "rows": 4,
+        "last_step": 3,
+        "start_step": 0,
+        "bytes": 1222
+      }
+    ],
+    "limitations": [
+      "Durable coverage is not proof of a committed optimizer state.",
+      "Partial metrics are diagnostics, not a complete throughput benchmark.",
+      "Bytes beyond a progress marker are uncommitted and ignored."
+    ]
+  },
+  "comparison": {
+    "bitwise_equal": true,
+    "tensor_count": 36,
+    "tensor_elements": 40041,
+    "max_tensor_error": 0.0,
+    "canonical_state_sha256": "148c81af5c8c2957e5c5da6787b1334d1db7d671bab7f2b6a775b3dd2a0e4f86"
+  },
+  "runs": {
+    "uninterrupted": {
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=1",
+        "--nproc-per-node=2",
+        "--master-addr=127.0.0.1",
+        "--master-port=54424",
+        "-m",
+        "tailtrace.recovery",
+        "--config",
+        "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/whole-config.json",
+        "--out",
+        "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/whole"
+      ],
+      "returncode": 0,
+      "log": "whole.log"
+    },
+    "partial_write": {
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=1",
+        "--nproc-per-node=2",
+        "--master-addr=127.0.0.1",
+        "--master-port=54437",
+        "-m",
+        "tailtrace.recovery",
+        "--config",
+        "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/crash-config.json",
+        "--out",
+        "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/failed",
+        "--fault-step",
+        "4",
+        "--fault-mode",
+        "partial_write"
+      ],
+      "returncode": 1,
+      "log": "partial-write.log"
+    },
+    "resumed": {
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=1",
+        "--nproc-per-node=2",
+        "--master-addr=127.0.0.1",
+        "--master-port=54449",
+        "-m",
+        "tailtrace.recovery",
+        "--config",
+        "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/whole-config.json",
+        "--out",
+        "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/resumed",
+        "--resume-latest",
+        "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/failed"
+      ],
+      "returncode": 0,
+      "log": "resume.log"
+    }
+  },
+  "hardware": {
+    "created_utc": "2026-10-07T03:23:33.866110+00:00",
+    "python": "3.13.0",
+    "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+    "git_commit": "30af97ba26f849ce5af6203d403605e2ca709d3c",
+    "git_dirty": false,
+    "hostname": "Rs-MacBook-Pro-2.local",
+    "source_sha256": "098b4a0f5e57e12a46d4fb08d906920a2a9d0f6241b98aa2d9c7bbbd0f1c3160"
+  },
+  "limitations": [
+    "one physical CPU host",
+    "same world size",
+    "fault injection aborts one rank after 4096 bytes of an actual DCP shard write",
+    "corruption is deliberately injected after the failed job exits",
+    "no power-loss, remote-filesystem durability, elastic, FSDP2, or GPU claim"
+  ]
+}

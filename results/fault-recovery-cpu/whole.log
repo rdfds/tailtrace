@@ -1,0 +1,30 @@
+W1006 23:23:16.883000 61891 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+[rank1]:W1006 23:23:20.630000 61896 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+[rank0]:W1006 23:23:20.630000 61895 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+/tmp/tailtrace-runtime/torch/distributed/checkpoint/filesystem.py:131: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  if tensor.storage().size() != tensor.numel():
+/tmp/tailtrace-runtime/torch/distributed/checkpoint/filesystem.py:131: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  if tensor.storage().size() != tensor.numel():
+{
+  "schema_version": 1,
+  "evidence": "observed",
+  "run": "/private/tmp/tailtrace-v04-evidence/fault-recovery-cpu/whole",
+  "world_size": 2,
+  "timing": "cpu_wall",
+  "instrumented": true,
+  "measured_steps": 6,
+  "median_step_ms": 4.6965834917500615,
+  "p95_step_ms": 48.33377021714114,
+  "tokens_per_second": 17061.153976875365,
+  "mean_padding_fraction": 0.08846408645356972,
+  "max_peak_memory_bytes": 0,
+  "steps": [],
+  "steps_retained": false,
+  "workload_sha256": "9434637c798eb5678832e93e66c1cfd5ea3b2d1209b8c7cb7bb95d4b69ae5b7b",
+  "quantile_method": "exact_external_sqlite_sort",
+  "limitations": [
+    "Step latency is max rank-local duration, not a clock-aligned global critical path.",
+    "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
+    "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
+  ]
+}
