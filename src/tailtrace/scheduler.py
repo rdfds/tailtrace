@@ -17,7 +17,7 @@ def feasible(groups, lengths, models):
     )
 
 
-def improve(groups, lengths, models, rounds=12):
+def improve_reference(groups, lengths, models, rounds=12):
     """Accept only strict lexicographic improvements; fixed ranks retain their models."""
     groups = [list(g) for g in groups]
     current = objective(groups, lengths, models)
@@ -45,6 +45,69 @@ def improve(groups, lengths, models, rounds=12):
         if winner is None:
             break
         groups, current = winner, winner_score
+    return groups
+
+
+def improve(groups, lengths, models, rounds=12):
+    """Evaluate moves from cached rank shapes; preserve reference traversal and ties.
+
+    Only the two changed ranks need capacity checks and cost evaluation. Summation
+    still uses physical-rank order: subtracting cached totals changes floating-point
+    rounding and can select a different winner. Whole assignments are copied only
+    once on entry, then edited after selecting the strict best move of each round.
+    """
+    groups = [list(g) for g in groups]
+    if not feasible(groups, lengths, models):
+        return improve_reference(groups, lengths, models, rounds)
+    for _ in range(rounds):
+        shapes = [group_shape(g, lengths) for g in groups]
+        costs = [m.predict(*shape) for m, shape in zip(models, shapes, strict=True)]
+        tops = []
+        for group in groups:
+            widths = sorted((lengths[i] - 1 for i in group), reverse=True)
+            tops.append((widths[0], widths[1] if len(widths) > 1 else 0))
+
+        def changed_shape(rank, removed, added, shapes=shapes, tops=tops):
+            count, width = shapes[rank]
+            if removed is not None:
+                count -= 1
+                if lengths[removed] - 1 == tops[rank][0]:
+                    width = tops[rank][1]
+            if added is not None:
+                count += 1
+                width = max(width, lengths[added] - 1)
+            return count, width
+
+        winner = None
+        winner_score = max(costs), sum(costs)
+        for source, group in enumerate(groups):
+            for i in sorted(group):
+                for target in range(len(models)):
+                    if source == target:
+                        continue
+                    for j in [None, *sorted(groups[target])]:
+                        a = changed_shape(source, i, j)
+                        b = changed_shape(target, j, i)
+                        if (
+                            not a[0]
+                            or not models[source].permits(*a)
+                            or not models[target].permits(*b)
+                        ):
+                            continue
+                        trial_costs = costs.copy()
+                        trial_costs[source] = models[source].predict(*a)
+                        trial_costs[target] = models[target].predict(*b)
+                        score = max(trial_costs), sum(trial_costs)
+                        if score < winner_score:
+                            winner, winner_score = (source, target, i, j), score
+        if winner is None:
+            break
+        source, target, i, j = winner
+        groups[source].remove(i)
+        groups[target].append(i)
+        if j is not None:
+            groups[target].remove(j)
+            groups[source].append(j)
     return groups
 
 
