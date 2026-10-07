@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "evidence": "observed_cpu",
+  "recorded_utc": "2026-10-07T03:30:43.240229+00:00",
+  "source_sha256": "098b4a0f5e57e12a46d4fb08d906920a2a9d0f6241b98aa2d9c7bbbd0f1c3160",
+  "source_code_commit": "30af97ba26f849ce5af6203d403605e2ca709d3c",
+  "environment": {
+    "python": "3.13.0",
+    "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+    "torch": "2.8.0",
+    "ray": "2.59.0",
+    "cuda_available": false
+  },
+  "core": {
+    "command": "pytest -m 'not cuda and not ray and not spark'",
+    "passed": 116,
+    "skipped": 2,
+    "deselected": 17,
+    "seconds": 74.02,
+    "log": "core.log"
+  },
+  "ray": {
+    "command": "pytest tests/test_ray.py -m ray",
+    "passed": 1,
+    "seconds": 35.16,
+    "log": "ray.log",
+    "workers": 2,
+    "metrics_flush_every": 1,
+    "checkpoint_step": 3
+  },
+  "lint": {
+    "commands": [
+      "ruff check src tests",
+      "ruff format --check src tests"
+    ],
+    "status": "passed"
+  },
+  "optional_not_executed": [
+    "NVIDIA CUDA/FSDP2",
+    "physical multi-host execution",
+    "local Spark rerun"
+  ],
+  "spending": {
+    "hosted_workflows_launched": 0,
+    "paid_compute_provisioned": false
+  },
+  "supplemental_artifacts": {
+    "command": "pytest tests/test_published_reliability.py -q",
+    "passed": 4,
+    "seconds": 3.36,
+    "note": "Includes an added retained Ray artifact check after the main core suite."
+  }
+}
