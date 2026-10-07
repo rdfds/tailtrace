@@ -35,9 +35,9 @@ def provenance() -> dict:
     def git(*args):
         try:
             return subprocess.check_output(
-                ["git", *args], text=True, stderr=subprocess.DEVNULL
+                ["git", *args], text=True, stderr=subprocess.DEVNULL, timeout=5
             ).strip()
-        except (OSError, subprocess.CalledProcessError):
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
             return None
 
     root = Path(__file__).parent
@@ -47,12 +47,13 @@ def provenance() -> dict:
             digest.update(str(path.relative_to(root)).encode())
             digest.update(b"\0")
             digest.update(path.read_bytes())
+    dirty = git("status", "--porcelain")
     return {
         "created_utc": datetime.now(UTC).isoformat(),
         "python": platform.python_version(),
         "platform": platform.platform(),
         "git_commit": git("rev-parse", "HEAD"),
-        "git_dirty": bool(git("status", "--porcelain")),
+        "git_dirty": bool(dirty) if dirty is not None else None,
         "hostname": platform.node(),
         "source_sha256": digest.hexdigest(),
     }
