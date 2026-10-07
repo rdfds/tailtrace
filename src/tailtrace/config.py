@@ -34,6 +34,7 @@ class TrainConfig:
     profile_steps: int = 3
     diagnostic_sync: bool = False
     checkpoint_every: int = 0
+    metrics_flush_every: int = 32
     threads: int = 1
     delay_rank: int = -1
     delay_ms: float = 0.0
@@ -42,7 +43,7 @@ class TrainConfig:
         for name in ("activation_checkpointing", "profile", "nvtx", "diagnostic_sync"):
             if not isinstance(getattr(self, name), bool):
                 raise ValueError(f"{name} must be boolean")
-        for name in ("seed", "warmup", "checkpoint_every", "delay_rank"):
+        for name in ("seed", "warmup", "checkpoint_every", "metrics_flush_every", "delay_rank"):
             if isinstance(getattr(self, name), bool) or not isinstance(getattr(self, name), int):
                 raise ValueError(f"{name} must be an integer")
         if not 0 <= self.seed < 2**31:
@@ -77,6 +78,8 @@ class TrainConfig:
             raise ValueError("width must be divisible by heads")
         if not 0 <= self.warmup < self.steps or self.checkpoint_every < 0:
             raise ValueError("require 0 <= warmup < steps and checkpoint_every >= 0")
+        if self.metrics_flush_every < 0:
+            raise ValueError("metrics_flush_every must be nonnegative")
         if self.lr <= 0 or self.delay_ms < 0:
             raise ValueError("lr must be positive and delay_ms nonnegative")
         for field, choices in {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import time
 from pathlib import Path
 
@@ -9,21 +10,68 @@ import torch
 import torch.distributed as dist
 
 from tailtrace.config import TrainConfig
+from tailtrace.corpus import content_hash
 from tailtrace.distributed import setup, wrap_model
 from tailtrace.evidence import atomic_json, provenance
+from tailtrace.journal import RankJournal
 from tailtrace.model import CausalTransformer, make_batch, token_loss
 from tailtrace.planner import make_lengths, plan_epoch
 from tailtrace.profiling import region
 
 
-def run(config: TrainConfig, out: str | Path, resume: str | None = None) -> dict:
+def run(config: TrainConfig, out: str | Path, resume: str | None = None, resume_root=None) -> dict:
+    if resume and resume_root:
+        raise ValueError("choose explicit resume or latest compatible checkpoint")
     out = Path(out).resolve()
     # Reusing output mixes stale ranks/traces with a new run. All ranks make the same check.
     if (out / "manifest.json").exists():
         raise FileExistsError(f"run already exists: {out}")
     out.mkdir(parents=True, exist_ok=True)
     device, rank, world, owned = setup(config)
+    claimed = False
     try:
+        origin = provenance()
+        status = {
+            "source_sha256": origin["source_sha256"],
+            "config_sha256": content_hash(config.to_dict()),
+            "torch": str(torch.__version__),
+            "out": str(out),
+            "resume": str(resume),
+            "resume_root": str(resume_root),
+        }
+        if world > 1:
+            statuses = [None] * world
+            dist.all_gather_object(statuses, status)
+            if any(s != status for s in statuses):
+                raise ValueError("rank source, configuration, or torch version differs")
+        error = None
+        if rank == 0:
+            try:
+                with (out / "run.lock").open("x"):
+                    pass
+                if list(out.glob("metrics-rank*.jsonl")):
+                    raise FileExistsError(
+                        "output contains stale rank metrics; choose a new directory"
+                    )
+                atomic_json(
+                    out / "attempt.json",
+                    {
+                        "schema_version": 1,
+                        "world_size": world,
+                        "config": config.to_dict(),
+                        "resume": resume,
+                        "resume_root": resume_root,
+                    },
+                )
+            except OSError as exc:
+                error = str(exc)
+        statuses = [error]
+        if world > 1:
+            statuses = [None] * world
+            dist.all_gather_object(statuses, error)
+        if any(statuses):
+            raise FileExistsError("output preflight failed: " + "; ".join(s for s in statuses if s))
+        claimed = True
         with contextlib.ExitStack() as resources:
             corpus = None
             if config.dataset_path:
@@ -48,14 +96,43 @@ def run(config: TrainConfig, out: str | Path, resume: str | None = None) -> dict
                     raise ValueError("corpus preflight failed: " + "; ".join(errors))
                 if len({s["sha256"] for s in statuses}) != 1:
                     raise ValueError("ranks loaded different corpus contents")
-            return _run(config, out, resume, device, rank, world, corpus)
+            return _run(
+                config, out, resume, device, rank, world, corpus, resume_root, resources, origin
+            )
+    except BaseException as exc:
+        if claimed:
+            try:
+                atomic_json(
+                    out / f"failure-rank{rank}.json",
+                    {
+                        "schema_version": 1,
+                        "rank": rank,
+                        "exception": type(exc).__name__,
+                        "message": str(exc)[:16384],
+                        "completed": False,
+                    },
+                )
+            except OSError:
+                pass
+        raise
     finally:
         if owned:
             dist.destroy_process_group()
 
 
-def _run(config, out, resume, device, rank, world, corpus=None):
-    origin = provenance()
+def _run(
+    config,
+    out,
+    resume,
+    device,
+    rank,
+    world,
+    corpus=None,
+    resume_root=None,
+    resources=None,
+    origin=None,
+):
+    origin = origin or provenance()
     torch.set_num_threads(config.threads)
     torch.manual_seed(config.seed)
     lengths = (
@@ -103,6 +180,36 @@ def _run(config, out, resume, device, rank, world, corpus=None):
     if not plans:
         raise ValueError("samples must cover at least one complete global batch")
     initial_planning_ms = (time.perf_counter() - planning_start) * 1000
+    selection = None
+    if resume_root:
+        from tailtrace.checkpoint_index import select
+
+        error = None
+        try:
+            selection = select(
+                resume_root,
+                config,
+                world,
+                fleet.sha256 if fleet else None,
+                corpus.sha256 if corpus else None,
+                torch_version=str(torch.__version__),
+            )
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            error = str(exc)
+        status = {
+            "error": error,
+            "selected": (selection["path"], selection["sha256"]) if selection else None,
+        }
+        statuses = [status]
+        if world > 1:
+            statuses = [None] * world
+            dist.all_gather_object(statuses, status)
+        errors = [s["error"] for s in statuses if s["error"]]
+        if errors:
+            raise ValueError("checkpoint selection failed: " + "; ".join(errors))
+        if len({tuple(s["selected"]) for s in statuses}) != 1:
+            raise ValueError("ranks selected different checkpoint contents")
+        resume = selection["path"]
     model = wrap_model(CausalTransformer(config).to(device), config, device, world)
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
     start_step = 0
@@ -134,6 +241,35 @@ def _run(config, out, resume, device, rank, world, corpus=None):
         on_trace_ready=lambda p: p.export_chrome_trace(str(out / f"trace-rank{rank}.json")),
     )
     rows, losses, timers = [], [], []
+    journal, error = None, None
+    try:
+        journal = RankJournal(out, rank, start_step)
+        if resources:
+            resources.callback(journal.close)
+    except OSError as exc:
+        error = str(exc)
+    statuses = [error]
+    if world > 1:
+        statuses = [None] * world
+        dist.all_gather_object(statuses, error)
+    if any(statuses):
+        raise ValueError("journal preflight failed: " + "; ".join(s for s in statuses if s))
+    telemetry_ms, peak_buffered_rows = 0.0, 0
+
+    def flush_metrics(complete=False):
+        nonlocal telemetry_ms
+        begin = time.perf_counter()
+        if timers and timers[-1]:
+            timers[-1][1].synchronize()
+        for row, loss_sum, timer in zip(rows, losses, timers, strict=True):
+            row["step_ms"] = timer[0].elapsed_time(timer[1]) if timer else row["host_enqueue_ms"]
+            row["loss_sum"] = loss_sum.item()
+        journal.write(rows, complete)
+        rows.clear()
+        losses.clear()
+        timers.clear()
+        telemetry_ms += (time.perf_counter() - begin) * 1000
+
     if device.type == "cuda":
         torch.cuda.synchronize()
         torch.cuda.reset_peak_memory_stats()
@@ -207,8 +343,15 @@ def _run(config, out, resume, device, rank, world, corpus=None):
             )
             losses.append(loss_sum)
             timers.append(gpu_pair)
+            peak_buffered_rows = max(peak_buffered_rows, len(rows))
             if config.profile:
                 profiler.step()
+            if (
+                config.metrics_flush_every
+                and len(rows) >= config.metrics_flush_every
+                and step + 1 < config.steps
+            ):
+                flush_metrics()
             if config.checkpoint_every and (step + 1) % config.checkpoint_every == 0:
                 from tailtrace.checkpoint import save
 
@@ -225,10 +368,8 @@ def _run(config, out, resume, device, rank, world, corpus=None):
                 )
     if device.type == "cuda":
         torch.cuda.synchronize()
+    flush_metrics(complete=True)
     wall_ms = (time.perf_counter() - wall_start) * 1000
-    for row, loss_sum, timer in zip(rows, losses, timers, strict=True):
-        row["step_ms"] = timer[0].elapsed_time(timer[1]) if timer else row["host_enqueue_ms"]
-        row["loss_sum"] = loss_sum.item()
     hardware = {
         **origin,
         "rank": rank,
@@ -237,13 +378,18 @@ def _run(config, out, resume, device, rank, world, corpus=None):
         "gpu": torch.cuda.get_device_name() if device.type == "cuda" else None,
         "cuda_runtime": torch.version.cuda,
         "backend": dist.get_backend() if world > 1 else None,
+        "local_rank": int(os.environ.get("LOCAL_RANK", 0)),
+        "group_rank": int(os.environ.get("GROUP_RANK", 0)),
+        "local_world_size": int(os.environ.get("LOCAL_WORLD_SIZE", world)),
     }
     payload = {
-        "rows": rows,
         "hardware": hardware,
         "wall_ms": wall_ms,
         "initial_planning_ms": initial_planning_ms,
         "epoch_planning_ms": epoch_planning_ms,
+        "telemetry_ms": telemetry_ms,
+        "peak_buffered_rows": peak_buffered_rows,
+        "journal": journal.snapshot(complete=True),
     }
     gathered = [None] * world
     if world > 1:
@@ -251,9 +397,6 @@ def _run(config, out, resume, device, rank, world, corpus=None):
     else:
         gathered = [payload]
     if rank == 0:
-        for p in gathered:
-            path = out / f"metrics-rank{p['hardware']['rank']}.jsonl"
-            path.write_text("".join(json.dumps(row, allow_nan=False) + "\n" for row in p["rows"]))
         manifest = {
             "schema_version": 1,
             "evidence": "observed",
@@ -262,12 +405,28 @@ def _run(config, out, resume, device, rank, world, corpus=None):
             "hardware": [p["hardware"] for p in gathered],
             "start_step": start_step,
             "resume": resume,
+            "checkpoint_selection": selection,
             "training_loop_wall_ms": max(p["wall_ms"] for p in gathered),
             "initial_planning_ms": max(p["initial_planning_ms"] for p in gathered),
             "epoch_planning_ms": max(p["epoch_planning_ms"] for p in gathered),
             "dropped_samples_per_epoch": config.samples % (world * config.batch_size),
             "timing": "cuda_event" if device.type == "cuda" else "cpu_wall",
-            "instrumented": config.profile or config.diagnostic_sync or config.nvtx,
+            "instrumented": (
+                config.profile
+                or config.diagnostic_sync
+                or config.nvtx
+                or (
+                    config.metrics_flush_every > 0
+                    and config.steps - start_step > config.metrics_flush_every
+                )
+            ),
+            "telemetry": {
+                "flush_every": config.metrics_flush_every,
+                "mode": "bounded" if config.metrics_flush_every else "deferred",
+                "wall_ms": max(p["telemetry_ms"] for p in gathered),
+                "peak_buffered_rows": max(p["peak_buffered_rows"] for p in gathered),
+                "rank_progress": [p["journal"] for p in gathered],
+            },
             "fleet": fleet.summary() if fleet else None,
             "dataset": (
                 {
@@ -285,7 +444,7 @@ def _run(config, out, resume, device, rank, world, corpus=None):
         atomic_json(out / "manifest.json", manifest)
         from tailtrace.report import summarize_run
 
-        summary = summarize_run(out)
+        summary = summarize_run(out, retain_steps=False)
         atomic_json(out / "summary.json", summary)
         print(json.dumps(summary, indent=2))
         return summary
