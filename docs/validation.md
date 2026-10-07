@@ -9,6 +9,8 @@
 | Causal transformer / token objective | CPU gradients passed | Mixed-precision accuracy on GPU |
 | Real two-rank DDP | Gloo fp64 gradients + AdamW updates passed | NCCL multi-node run |
 | Checkpoint recovery | Exact CPU next update and mid-epoch resume passed | FSDP2 shard recovery on GPU |
+| Process crash / real text | Actual rank exit, restart, and bitwise model/AdamW proof | Mid-write loss, machine loss, and elastic recovery |
+| Incremental local search | 120 differential cases and four paired CPU timing cases | GPU training overhead/benefit |
 | Kineto profiling | Actual CPU trace export and analysis passed | Real CUDA trace capture |
 | Nsight SQLite adapter | Generated schema fixtures passed | Versioned NVIDIA-exported fixtures |
 | CUDA norm / FSDP2 | Implemented; manual GPU gate supplied | **No NVIDIA hardware validation yet** |
@@ -19,6 +21,12 @@ The baseline [GitHub run](https://github.com/rdfds/tailtrace/actions/runs/375536
 passed CPU, Ray, and Spark jobs. The current workflow also reproduces all 384 scheduling
 cases and retains CPU calibration artifacts. GPU validation remains separate; a passing
 CPU workflow does not validate CUDA kernels or FSDP2.
+
+Version 0.3 is validated locally and skips hosted CI to avoid paid compute minutes.
+The badge and earlier hosted run do not certify this version. Raw local evidence is
+in [planner measurements](../results/planner-cpu/README.md) and
+[process recovery](../results/recovery-cpu/README.md); the published recovery test
+reloads the retained final distributed checkpoints and reproduces the state hash.
 
 ## Run the local correctness suite
 

@@ -15,6 +15,12 @@ retains every input, assignment, failure, and search budget. Open its
 [offline inspector](results/scheduling-audit/report.html) after cloning to explore
 physical-rank layouts and proven proxy regret.
 
+Version 0.3 adds immutable text shards, a real rank-crash recovery audit, and an
+incremental scheduler. [Paired CPU measurements](results/planner-cpu/README.md) show
+**2.76×–13.07× faster local search with identical assignments** on four tested sizes.
+The [process recovery experiment](results/recovery-cpu/README.md) kills one rank after
+a checkpoint and checks bitwise equality of the final model and full AdamW state.
+
 This is experimental systems software. CUDA and multi-node results are **not yet
 validated on NVIDIA hardware**. The repository includes executable CPU experiments,
 correctness tests, and hardware validation instructions.
@@ -77,9 +83,10 @@ the offline tools does not load any of these runtimes.
 | Workload intervention | Heterogeneous compute models, capacity-aware beam construction, moves/swaps, conserved global batches |
 | Scheduling audit | Independent feasibility certificates, budgeted exact minimax oracle, six-method adversarial ablations |
 | Calibration | Isolated compute collection, median replicates, nonnegative fits, shape-separated held-out validation |
+| Real data | UTF-8 byte shards, read-only memory maps, overlapping windows, target accounting, content identities |
 | Distributed training | Causal transformer, token-weighted loss, DDP/FSDP2, bf16, activation checkpointing, torchrun/Slurm launch |
 | CUDA | C++/CUDA residual-RMSNorm forward/backward, fp32 accumulation, deterministic two-pass weight reduction, current-stream support |
-| Recovery | Distributed model/optimizer checkpoints, atomic completion markers, deterministic resume, fleet content guards |
+| Recovery | Distributed checkpoints, synced completion markers, real rank-crash audit, exact model/AdamW recovery, dataset/fleet guards |
 | Profiling | Kineto, NVTX, Nsight SQLite adapter, interval unions, exposed collective occupancy and copy/compute overlap |
 | Experiments | Randomized paired arms, protocol/hardware/source guards, bootstrap across independent seeds, offline HTML reports |
 | Cluster orchestration | Ray Train reuses the same loop and global planner; local object store is bounded |
@@ -97,6 +104,18 @@ CPU, Ray, and Spark jobs passed in [the baseline GitHub CI run](https://github.c
 Current CI additionally reproduces the entire oracle campaign and uploads fresh CPU
 calibration evidence. CUDA/FSDP2 and multi-node execution need NVIDIA validation.
 Component status and launch notes are documented in [validation](docs/validation.md).
+
+The v0.3 updates are validated locally; hosted CI was intentionally skipped to avoid
+spending compute minutes. The existing badge reflects the last hosted run, not v0.3.
+The text and recovery experiment runs entirely on a CPU laptop:
+
+```bash
+tailtrace corpus-build examples/corpus --max-length 128 --out runs/text-corpus
+tailtrace recovery-audit --config configs/cpu-recovery.json --fault-step 2 --out runs/recovery
+```
+
+See [reader and failure contracts](docs/corpus-and-recovery.md) for the exact tested
+failure window, immutable-data rules, and shared-filesystem requirements for Ray.
 
 The beam scheduler matches the proven proxy optimum in **358 of 358** completed feasible
 searches; it finds feasible assignments in all 374 cases not proven infeasible. Ten cases
@@ -139,5 +158,6 @@ Research novelty is a hypothesis requiring broader review and real experiments.
 variable-length workload imbalance. TailTrace focuses on checkable assignments,
 oracle gaps, objective equivalence, and reproducible evidence. See the
 [0.2 release notes](docs/release-v0.2.md) for the new interfaces and compatibility scope.
+The [0.3 release notes](docs/release-v0.3.md) cover text, recovery, and planner overhead.
 
 MIT licensed. See [architecture](docs/architecture.md) and [validation](docs/validation.md).

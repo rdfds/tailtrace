@@ -67,7 +67,8 @@ not model quality or speed.
 
 ## Planner timing
 
-Initial plan construction and subsequent epoch planning have separate manifest timings.
+Initial planning (including fleet validation) and subsequent epoch planning have
+separate manifest timings.
 Epoch planning is included in training-loop wall time but excluded from step timing.
 Epoch zero reuses its initial plan. `planner-bench` measures the incremental move/swap
 evaluator against the v0.2 full-rescoring implementation with randomized paired order,

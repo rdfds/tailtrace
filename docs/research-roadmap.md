@@ -19,10 +19,12 @@ could show different behavior, but that must be measured.
 
 ## Subsequent engineering work
 
-* Calibrate a cost model using isolated forward/backward timings, including linear MLP
-  work and rank-dependent GPU speeds. Do not fit pure compute from NCCL-inclusive steps.
-* Add real tokenized document shards and verify sample conservation across resumable
-  readers. Keep the synthetic workload for deterministic diagnosis.
+* Validate the implemented isolated-compute calibration on heterogeneous NVIDIA ranks.
+  Linear MLP terms, held-out shapes, and raw replicates are implemented; GPU evidence
+  remains open. Do not fit pure compute from NCCL-inclusive steps.
+* Extend the immutable byte shards and exact CPU process recovery audit to multi-node
+  shared storage. Real text, dataset identity guards, and mid-epoch CPU recovery are
+  implemented; process loss during a checkpoint write needs a separate fault test.
 * Add packed/variable-length attention as a separately controlled intervention. It changes
   the padded-attention cost model; do not silently keep the current proxy.
 * Verify FSDP2 mixed precision and sharded checkpoint recovery on multi-node hardware.
