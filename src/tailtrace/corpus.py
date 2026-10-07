@@ -72,9 +72,11 @@ def build_corpus(inputs, out, max_length=128, min_length=2):
                     digest.update(block)
                     size += len(block)
                     pending += block
-                    while len(pending) >= max_length:
-                        emit(pending[:max_length], doc)
-                        pending = pending[max_length - 1 :]
+                    cursor = 0
+                    while len(pending) - cursor >= max_length:
+                        emit(pending[cursor : cursor + max_length], doc)
+                        cursor += max_length - 1
+                    pending = pending[cursor:]
                 decoder.decode(b"", final=True)
             dropped = 0
             if len(pending) >= min_length:
