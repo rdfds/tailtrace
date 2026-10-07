@@ -17,7 +17,16 @@ from tailtrace.config import TrainConfig
 from tailtrace.evidence import atomic_json, provenance
 
 
-def launch(config_path, out, log_path, resume=None, fault_step=None, timeout=120):
+def launch(
+    config_path,
+    out,
+    log_path,
+    resume=None,
+    fault_step=None,
+    timeout=120,
+    resume_root=None,
+    fault_mode="after_save",
+):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
@@ -39,7 +48,9 @@ def launch(config_path, out, log_path, resume=None, fault_step=None, timeout=120
     if resume:
         command += ["--resume", str(resume)]
     if fault_step is not None:
-        command += ["--fault-step", str(fault_step)]
+        command += ["--fault-step", str(fault_step), "--fault-mode", fault_mode]
+    if resume_root:
+        command += ["--resume-latest", str(resume_root)]
     with Path(log_path).open("x") as log:
         process = subprocess.Popen(
             command,
@@ -196,9 +207,17 @@ def main():
     parser.add_argument("--config", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--resume")
+    parser.add_argument("--resume-latest")
     parser.add_argument("--fault-step", type=int)
+    parser.add_argument(
+        "--fault-mode", choices=["after_save", "partial_write"], default="after_save"
+    )
     args = parser.parse_args()
-    if args.fault_step is not None:
+    if args.fault_step is not None and args.fault_mode == "partial_write":
+        from tailtrace.faults import install_partial_writer
+
+        install_partial_writer(args.fault_step)
+    elif args.fault_step is not None:
         import tailtrace.checkpoint as checkpoint
 
         original = checkpoint.save
@@ -212,7 +231,7 @@ def main():
         checkpoint.save = save_then_exit
     from tailtrace.train import run
 
-    run(TrainConfig.load(args.config), args.out, args.resume)
+    run(TrainConfig.load(args.config), args.out, args.resume, args.resume_latest)
 
 
 if __name__ == "__main__":
