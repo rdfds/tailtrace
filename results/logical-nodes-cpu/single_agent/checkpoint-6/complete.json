@@ -1,0 +1,59 @@
+{
+  "step": 6,
+  "world_size": 2,
+  "torch_version": "2.8.0",
+  "config": {
+    "seed": 17,
+    "samples": 12,
+    "min_length": 2,
+    "max_length": 128,
+    "batch_size": 2,
+    "steps": 6,
+    "warmup": 0,
+    "width": 16,
+    "heads": 2,
+    "layers": 1,
+    "vocab_size": 256,
+    "lr": 0.001,
+    "strategy": "ddp",
+    "planner": "balanced",
+    "fleet_path": null,
+    "dataset_path": "/private/tmp/tailtrace-integration/runs/text-corpus",
+    "kernel": "reference",
+    "device": "cpu",
+    "precision": "fp32",
+    "bucket_cap_mb": 25,
+    "activation_checkpointing": false,
+    "profile": false,
+    "nvtx": false,
+    "profile_steps": 3,
+    "diagnostic_sync": false,
+    "checkpoint_every": 6,
+    "metrics_flush_every": 2,
+    "threads": 1,
+    "delay_rank": -1,
+    "delay_ms": 0.0
+  },
+  "fleet_sha256": null,
+  "dataset_sha256": "ec3974fe68e78cffcf1d2ab53856bf323f684ee6fc7cf05eb8f5e53bac12c3b7",
+  "schema_version": 2,
+  "model_contract_sha256": "546f0267149bce8a15936ad3ac1cd93a4bb98b6c6c918aba8cace341e925e347",
+  "files": [
+    {
+      "path": ".metadata",
+      "bytes": 13697,
+      "sha256": "41ad2820b6397bca4d3972f019e4b5e4b09b9c1568fac35250a5c04e36b610ef"
+    },
+    {
+      "path": "__0_0.distcp",
+      "bytes": 120428,
+      "sha256": "10c59da8a88fbe4d6a370374c339f0d3dc2370174fda47f2297f00e21fa9e9b5"
+    },
+    {
+      "path": "__1_0.distcp",
+      "bytes": 111796,
+      "sha256": "592e09a58a1e132a12095bb0cd691a08eec6144e5b6669ef5075575325aa8c87"
+    }
+  ],
+  "sha256": "484b6640232e22dfb51268d9b0b704d4922b0471f251d9682631d7be822335d8"
+}

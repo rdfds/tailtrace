@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "evidence": "observed_cpu",
+  "scope": "two_logical_node_rendezvous",
+  "physical_hosts": 1,
+  "logical_nodes": 2,
+  "world_size": 2,
+  "topology": [
+    [
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      1,
+      0,
+      1,
+      1
+    ]
+  ],
+  "comparison": {
+    "bitwise_equal": true,
+    "tensor_count": 36,
+    "tensor_elements": 40041,
+    "max_tensor_error": 0.0,
+    "canonical_state_sha256": "148c81af5c8c2957e5c5da6787b1334d1db7d671bab7f2b6a775b3dd2a0e4f86"
+  },
+  "reference": {
+    "command": [
+      "/private/tmp/tailtrace-test-env/bin/python",
+      "-m",
+      "torch.distributed.run",
+      "--nnodes=1",
+      "--nproc-per-node=2",
+      "--master-addr=127.0.0.1",
+      "--master-port=54460",
+      "-m",
+      "tailtrace.recovery",
+      "--config",
+      "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/config.json",
+      "--out",
+      "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/single_agent"
+    ],
+    "returncode": 0,
+    "log": "single-agent.log"
+  },
+  "agents": [
+    {
+      "logical_node": 0,
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=2",
+        "--nproc-per-node=1",
+        "--node-rank=0",
+        "--master-addr=127.0.0.1",
+        "--master-port=54471",
+        "-m",
+        "tailtrace",
+        "train",
+        "--config",
+        "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/config.json",
+        "--out",
+        "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/two_agents"
+      ],
+      "returncode": 0,
+      "log": "node-0.log"
+    },
+    {
+      "logical_node": 1,
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=2",
+        "--nproc-per-node=1",
+        "--node-rank=1",
+        "--master-addr=127.0.0.1",
+        "--master-port=54471",
+        "-m",
+        "tailtrace",
+        "train",
+        "--config",
+        "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/config.json",
+        "--out",
+        "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/two_agents"
+      ],
+      "returncode": 0,
+      "log": "node-1.log"
+    }
+  ],
+  "hardware": {
+    "created_utc": "2026-10-07T03:23:45.857578+00:00",
+    "python": "3.13.0",
+    "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+    "git_commit": "30af97ba26f849ce5af6203d403605e2ca709d3c",
+    "git_dirty": false,
+    "hostname": "Rs-MacBook-Pro-2.local",
+    "source_sha256": "098b4a0f5e57e12a46d4fb08d906920a2a9d0f6241b98aa2d9c7bbbd0f1c3160"
+  },
+  "limitations": [
+    "both logical nodes run on one physical CPU host",
+    "no multi-host networking, clock alignment, NCCL, GPU, or scaling claim"
+  ]
+}

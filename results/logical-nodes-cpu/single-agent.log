@@ -1,0 +1,30 @@
+W1006 23:23:35.579000 61955 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+[rank1]:W1006 23:23:38.051000 61958 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+[rank0]:W1006 23:23:38.051000 61957 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+/tmp/tailtrace-runtime/torch/distributed/checkpoint/filesystem.py:131: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  if tensor.storage().size() != tensor.numel():
+/tmp/tailtrace-runtime/torch/distributed/checkpoint/filesystem.py:131: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  if tensor.storage().size() != tensor.numel():
+{
+  "schema_version": 1,
+  "evidence": "observed",
+  "run": "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/single_agent",
+  "world_size": 2,
+  "timing": "cpu_wall",
+  "instrumented": true,
+  "measured_steps": 6,
+  "median_step_ms": 3.6396870273165405,
+  "p95_step_ms": 42.445686980499886,
+  "tokens_per_second": 20119.41047699601,
+  "mean_padding_fraction": 0.08846408645356972,
+  "max_peak_memory_bytes": 0,
+  "steps": [],
+  "steps_retained": false,
+  "workload_sha256": "9434637c798eb5678832e93e66c1cfd5ea3b2d1209b8c7cb7bb95d4b69ae5b7b",
+  "quantile_method": "exact_external_sqlite_sort",
+  "limitations": [
+    "Step latency is max rank-local duration, not a clock-aligned global critical path.",
+    "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
+    "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
+  ]
+}

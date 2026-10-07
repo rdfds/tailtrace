@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "evidence": "observed",
+  "run": "/private/tmp/tailtrace-v04-evidence/logical-nodes-cpu/two_agents",
+  "world_size": 2,
+  "timing": "cpu_wall",
+  "instrumented": true,
+  "measured_steps": 6,
+  "median_step_ms": 2.828437485732138,
+  "p95_step_ms": 36.45284374943003,
+  "tokens_per_second": 23697.78017460791,
+  "mean_padding_fraction": 0.08846408645356972,
+  "max_peak_memory_bytes": 0,
+  "steps": [],
+  "steps_retained": false,
+  "workload_sha256": "9434637c798eb5678832e93e66c1cfd5ea3b2d1209b8c7cb7bb95d4b69ae5b7b",
+  "quantile_method": "exact_external_sqlite_sort",
+  "limitations": [
+    "Step latency is max rank-local duration, not a clock-aligned global critical path.",
+    "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
+    "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
+  ]
+}
