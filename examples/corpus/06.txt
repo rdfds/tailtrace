@@ -1,0 +1,1 @@
+An atomic completion marker distinguishes a committed checkpoint from an incomplete save.

@@ -1,0 +1,18 @@
+{
+  "dataset_path": "runs/text-corpus",
+  "seed": 17,
+  "samples": 12,
+  "min_length": 2,
+  "max_length": 128,
+  "batch_size": 2,
+  "steps": 6,
+  "warmup": 0,
+  "width": 16,
+  "heads": 2,
+  "layers": 1,
+  "vocab_size": 256,
+  "strategy": "ddp",
+  "device": "cpu",
+  "planner": "balanced",
+  "threads": 1
+}

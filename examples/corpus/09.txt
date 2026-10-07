@@ -1,0 +1,1 @@
+Keep sample identities stable when changing rank ownership inside a global batch.

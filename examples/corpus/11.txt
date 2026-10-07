@@ -1,0 +1,1 @@
+An oracle proves optimality only after its bounded search completes.

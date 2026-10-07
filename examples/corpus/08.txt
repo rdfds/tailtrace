@@ -1,0 +1,1 @@
+A long collective can mean another rank arrived late, even when the network is healthy.

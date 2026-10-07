@@ -1,0 +1,1 @@
+AdamW recovery includes momentum, variance, and optimizer step counters.
