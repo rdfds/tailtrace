@@ -86,7 +86,11 @@ def summarize_run(directory: str | Path) -> dict:
         "limitations": [
             "Step latency is max rank-local duration, not a clock-aligned global critical path.",
             "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
-            "Synthetic token data exercises systems behavior; loss is not a language quality benchmark.",
+            (
+                "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
+                if manifest.get("dataset")
+                else "Synthetic token data exercises systems behavior; loss is not a language quality benchmark."
+            ),
         ],
     }
 
