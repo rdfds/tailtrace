@@ -30,12 +30,30 @@ def main():
     recovery.add_argument("--config", required=True)
     recovery.add_argument("--out", required=True)
     recovery.add_argument("--fault-step", type=int, default=2)
+    for name, help_text in (
+        ("fault-audit", "audit interrupted writes and corrupt-checkpoint fallback"),
+        ("node-audit", "verify separate logical node agents on one CPU host"),
+    ):
+        audit_command = commands.add_parser(name, help=help_text)
+        audit_command.add_argument("--config", required=True)
+        audit_command.add_argument("--out", required=True)
+    metrics_bench = commands.add_parser(
+        "metrics-bench", help="measure report memory on generated metrics"
+    )
+    metrics_bench.add_argument("--out", required=True)
+    metrics_bench.add_argument("--sizes", type=int, nargs="+", default=[1000, 10000, 50000])
     demo = commands.add_parser("demo", help="generate a labeled synthetic offline example")
     demo.add_argument("--out", default="runs/demo")
     train = commands.add_parser("train", help="train under Python or torchrun")
     train.add_argument("--config", required=True)
     train.add_argument("--out", required=True)
     train.add_argument("--resume")
+    train.add_argument("--resume-latest", help="root containing sealed checkpoint-* directories")
+    inspect = commands.add_parser(
+        "inspect-run", help="inspect committed telemetry from complete or crashed jobs"
+    )
+    inspect.add_argument("run")
+    inspect.add_argument("--out", required=True)
     calibration = commands.add_parser("calibrate", help="fit isolated per-rank compute models")
     calibration.add_argument("--config", required=True)
     calibration.add_argument("--batches", type=int, nargs="+", default=[1, 2, 4, 8])
@@ -61,6 +79,11 @@ def main():
     summary = commands.add_parser("summarize", help="validate and summarize rank metrics")
     summary.add_argument("run")
     summary.add_argument("--out", required=True)
+    summary.add_argument(
+        "--aggregate-only",
+        action="store_true",
+        help="bounded row memory with exact disk-backed percentiles",
+    )
     compare = commands.add_parser("compare", help="compare paired observed runs by seed")
     compare.add_argument("--baseline", nargs="+", required=True)
     compare.add_argument("--candidate", nargs="+", required=True)
@@ -86,6 +109,34 @@ def main():
     benchmark.add_argument("--dtype", choices=["float32", "float16", "bfloat16"], default="float32")
     benchmark.add_argument("--out", required=True)
     args = parser.parse_args()
+    if args.command == "metrics-bench":
+        from tailtrace.metrics_bench import benchmark
+
+        data = benchmark(args.out, args.sizes)
+        print(
+            json.dumps(
+                [{k: c[k] for k in ("global_steps", "python_peak_ratio")} for c in data["cases"]],
+                indent=2,
+            )
+        )
+        return
+    if args.command in {"fault-audit", "node-audit"}:
+        from tailtrace.config import TrainConfig
+
+        if args.command == "fault-audit":
+            from tailtrace.faults import audit_faults as execute
+        else:
+            from tailtrace.multinode import audit_nodes as execute
+        data = execute(TrainConfig.load(args.config), args.out)
+        print(json.dumps(data["comparison"], indent=2))
+        return
+    if args.command == "inspect-run":
+        from tailtrace.journal import inspect_run
+
+        data = inspect_run(args.run)
+        atomic_json(args.out, data)
+        print(json.dumps(data, indent=2))
+        return
     if args.command == "recovery-audit":
         from tailtrace.config import TrainConfig
         from tailtrace.recovery import audit
@@ -148,7 +199,7 @@ def main():
         from tailtrace.config import TrainConfig
         from tailtrace.train import run
 
-        run(TrainConfig.load(args.config), args.out, args.resume)
+        run(TrainConfig.load(args.config), args.out, args.resume, args.resume_latest)
         return
     if args.command == "nsys-import":
         from tailtrace.nsight import import_sqlite
@@ -192,7 +243,7 @@ def main():
     elif args.command == "summarize":
         from tailtrace.report import summarize_run
 
-        data = summarize_run(args.run)
+        data = summarize_run(args.run, retain_steps=not args.aggregate_only)
     elif args.command == "compare":
         from tailtrace.report import compare_runs
 
