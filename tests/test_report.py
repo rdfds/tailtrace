@@ -119,3 +119,28 @@ def test_paired_dataset_content_must_match(tmp_path):
         atomic_json(path / "manifest.json", data)
     with pytest.raises(ValueError, match="different dataset contents"):
         compare_runs([str(a)], [str(b)])
+
+
+def test_streamed_aggregate_matches_full_report_and_workload_guard(tmp_path):
+    a, b = tmp_path / "a", tmp_path / "b"
+    fixture_run(a, 1, "random")
+    fixture_run(b, 1, "balanced", 5)
+    full, aggregate = summarize_run(a), summarize_run(a, retain_steps=False)
+    for key in (
+        "measured_steps",
+        "median_step_ms",
+        "p95_step_ms",
+        "tokens_per_second",
+        "mean_padding_fraction",
+        "workload_sha256",
+    ):
+        assert full[key] == aggregate[key]
+    assert not aggregate["steps"] and not aggregate["steps_retained"]
+    for rank in range(2):
+        path = b / f"metrics-rank{rank}.jsonl"
+        rows = [json.loads(line) for line in path.read_text().splitlines()]
+        rows[2]["local_tokens"] = rows[2]["padded_tokens"] = 5
+        rows[2]["global_tokens"] = 10
+        path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    with pytest.raises(ValueError, match="token workloads"):
+        compare_runs([str(a)], [str(b)])

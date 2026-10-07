@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import math
 import random
 import statistics
+from contextlib import ExitStack
 from pathlib import Path
 
 
@@ -17,46 +19,73 @@ def percentile(values, q):
     return xs[lo] + (xs[hi] - xs[lo]) * (pos - lo)
 
 
-def summarize_run(directory: str | Path) -> dict:
+def summarize_run(directory: str | Path, retain_steps: bool = True) -> dict:
+    """Read ranks in lockstep; aggregate-only mode spills exact quantiles to disk."""
+    from tailtrace.journal import iter_committed_rows
+    from tailtrace.quantiles import DiskQuantiles
+
     directory = Path(directory)
     manifest = json.loads((directory / "manifest.json").read_text())
     world = manifest["world_size"]
-    paths = sorted(directory.glob("metrics-rank*.jsonl"))
-    if len(paths) != world:
-        raise ValueError(f"expected {world} rank files, found {len(paths)}")
-    grouped = {}
-    for path in paths:
-        for line in path.read_text().splitlines():
-            row = json.loads(line)
-            rank, step = row["rank"], row["step"]
-            if rank not in range(world) or (step, rank) in grouped:
-                raise ValueError("duplicate or invalid rank/step")
-            if not math.isfinite(row["step_ms"]) or row["step_ms"] <= 0:
-                raise ValueError("step_ms must be finite and positive")
-            grouped[step, rank] = row
-    expected_steps = set(range(manifest.get("start_step", 0), manifest["config"]["steps"]))
-    if {s for s, _ in grouped} != expected_steps:
-        raise ValueError("missing or unexpected steps")
-    steps = []
-    for step in sorted(expected_steps):
-        if any((step, rank) not in grouped for rank in range(world)):
-            raise ValueError(f"incomplete rank coverage at step {step}")
-        rows = [grouped[step, r] for r in range(world)]
-        tokens = rows[0]["global_tokens"]
-        if (
-            tokens <= 0
-            or any(r["global_tokens"] != tokens for r in rows)
-            or sum(r["local_tokens"] for r in rows) != tokens
-        ):
-            raise ValueError("inconsistent global token denominator")
-        if any(r["warmup"] != (step < manifest["config"]["warmup"]) for r in rows):
-            raise ValueError("inconsistent warmup flags")
-        if step < manifest["config"]["warmup"]:
-            continue
-        times = [r["step_ms"] for r in rows]
-        costs = [r["predicted_cost"] for r in rows]
-        steps.append(
-            {
+    paths = [directory / f"metrics-rank{rank}.jsonl" for rank in range(world)]
+    if set(directory.glob("metrics-rank*.jsonl")) != set(paths):
+        raise ValueError(f"expected {world} rank files with consecutive identities")
+    steps, durations, readers = [], [], []
+    total_tokens = total_duration = total_padding = 0
+    measured = peak_memory = 0
+    workload = hashlib.sha256()
+    with ExitStack() as resources:
+        quantiles = None if retain_steps else resources.enter_context(DiskQuantiles())
+        for rank, path in enumerate(paths):
+            if manifest.get("telemetry"):
+                reader, progress = iter_committed_rows(directory, rank)
+                resources.callback(reader.close)
+                expected = manifest["telemetry"]["rank_progress"][rank]
+                if (
+                    progress != expected
+                    or not progress["complete"]
+                    or path.stat().st_size != progress["bytes"]
+                ):
+                    raise ValueError("completed run journal differs from manifest")
+            else:
+                stream = resources.enter_context(path.open())
+                reader = (json.loads(line) for line in stream)
+            readers.append(reader)
+        for step in range(manifest.get("start_step", 0), manifest["config"]["steps"]):
+            rows = []
+            for rank, reader in enumerate(readers):
+                try:
+                    row = next(reader)
+                except StopIteration as exc:
+                    raise ValueError(f"incomplete rank coverage: missing steps at {step}") from exc
+                if row["rank"] != rank or row["step"] != step:
+                    raise ValueError("duplicate or invalid rank/step")
+                if not math.isfinite(row["step_ms"]) or row["step_ms"] <= 0:
+                    raise ValueError("step_ms must be finite and positive")
+                if (
+                    not math.isfinite(row["predicted_cost"])
+                    or row["predicted_cost"] <= 0
+                    or not math.isfinite(row["loss_sum"])
+                ):
+                    raise ValueError("cost and loss must be finite; cost must be positive")
+                if row["local_tokens"] < 0 or row["padded_tokens"] < row["local_tokens"]:
+                    raise ValueError("invalid padding/token accounting")
+                peak_memory = max(peak_memory, row["peak_memory_bytes"])
+                rows.append(row)
+            tokens = rows[0]["global_tokens"]
+            if (
+                tokens <= 0
+                or any(r["global_tokens"] != tokens for r in rows)
+                or sum(r["local_tokens"] for r in rows) != tokens
+            ):
+                raise ValueError("inconsistent global token denominator")
+            if any(r["warmup"] != (step < manifest["config"]["warmup"]) for r in rows):
+                raise ValueError("inconsistent warmup flags")
+            if step < manifest["config"]["warmup"]:
+                continue
+            times = [r["step_ms"] for r in rows]
+            costs = [r["predicted_cost"] for r in rows]
+            item = {
                 "step": step,
                 "step_ms": max(times),
                 "tokens": tokens,
@@ -65,10 +94,23 @@ def summarize_run(directory: str | Path) -> dict:
                 "proxy_imbalance": max(costs) / statistics.mean(costs),
                 "padding_fraction": 1 - tokens / sum(r["padded_tokens"] for r in rows),
             }
-        )
-    if not steps:
-        raise ValueError("no measured steps remain")
-    durations = [s["step_ms"] for s in steps]
+            workload.update(f"{step}:{tokens}\n".encode())
+            measured += 1
+            total_tokens += tokens
+            total_duration += item["step_ms"]
+            total_padding += item["padding_fraction"]
+            if retain_steps:
+                steps.append(item)
+                durations.append(item["step_ms"])
+            else:
+                quantiles.add(item["step_ms"])
+        for reader in readers:
+            if next(reader, None) is not None:
+                raise ValueError("duplicate or unexpected trailing steps")
+        if not measured:
+            raise ValueError("no measured steps remain")
+        median = statistics.median(durations) if retain_steps else quantiles.percentile(0.5)
+        p95 = percentile(durations, 0.95) if retain_steps else quantiles.percentile(0.95)
     return {
         "schema_version": 1,
         "evidence": manifest["evidence"],
@@ -76,21 +118,22 @@ def summarize_run(directory: str | Path) -> dict:
         "world_size": world,
         "timing": manifest["timing"],
         "instrumented": manifest["instrumented"],
-        "measured_steps": len(steps),
-        "median_step_ms": statistics.median(durations),
-        "p95_step_ms": percentile(durations, 0.95),
-        "tokens_per_second": sum(s["tokens"] for s in steps) / sum(durations) * 1000,
-        "mean_padding_fraction": statistics.mean(s["padding_fraction"] for s in steps),
-        "max_peak_memory_bytes": max(r["peak_memory_bytes"] for r in grouped.values()),
+        "measured_steps": measured,
+        "median_step_ms": median,
+        "p95_step_ms": p95,
+        "tokens_per_second": total_tokens / total_duration * 1000,
+        "mean_padding_fraction": total_padding / measured,
+        "max_peak_memory_bytes": peak_memory,
         "steps": steps,
+        "steps_retained": retain_steps,
+        "workload_sha256": workload.hexdigest(),
+        "quantile_method": "exact_in_memory_sort" if retain_steps else "exact_external_sqlite_sort",
         "limitations": [
             "Step latency is max rank-local duration, not a clock-aligned global critical path.",
             "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
-            (
-                "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
-                if manifest.get("dataset")
-                else "Synthetic token data exercises systems behavior; loss is not a language quality benchmark."
-            ),
+            "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
+            if manifest.get("dataset")
+            else "Synthetic token data exercises systems behavior; loss is not a language quality benchmark.",
         ],
     }
 
@@ -167,10 +210,11 @@ def compare_runs(baselines: list[str], candidates: list[str], bootstrap: int = 4
         if seed in seeds:
             raise ValueError("independent pairs must use distinct seeds")
         seeds.add(seed)
-        sa, sb = summarize_run(base), summarize_run(candidate)
-        if [(s["step"], s["tokens"]) for s in sa["steps"]] != [
-            (s["step"], s["tokens"]) for s in sb["steps"]
-        ]:
+        sa, sb = (
+            summarize_run(base, retain_steps=False),
+            summarize_run(candidate, retain_steps=False),
+        )
+        if sa["workload_sha256"] != sb["workload_sha256"]:
             raise ValueError("step and token workloads differ")
         pairs.append(
             {
