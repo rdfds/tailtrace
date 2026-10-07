@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "evidence": "observed_cpu",
+  "input_evidence": "synthetic",
+  "scope": "report_aggregation_memory",
+  "provenance": {
+    "created_utc": "2026-10-07T03:23:32.489444+00:00",
+    "python": "3.13.0",
+    "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+    "git_commit": "30af97ba26f849ce5af6203d403605e2ca709d3c",
+    "git_dirty": false,
+    "hostname": "Rs-MacBook-Pro-2.local",
+    "source_sha256": "098b4a0f5e57e12a46d4fb08d906920a2a9d0f6241b98aa2d9c7bbbd0f1c3160"
+  },
+  "cases": [
+    {
+      "global_steps": 1000,
+      "rank_rows": 2000,
+      "input_bytes": 378624,
+      "input_files": [
+        {
+          "path": "metrics-rank0.jsonl",
+          "bytes": 189312,
+          "sha256": "a64b13af9c687e510b615ecbf52dc024e6862e5d4e0ea3f6b74d237a4e65f094"
+        },
+        {
+          "path": "metrics-rank1.jsonl",
+          "bytes": 189312,
+          "sha256": "3d78a547bd04ee64c154599004db05bf1bef09b6e11f68a3651be19ac0306e7b"
+        }
+      ],
+      "observations": [
+        {
+          "command": [
+            "/private/tmp/tailtrace-test-env/bin/python",
+            "-m",
+            "tailtrace.metrics_bench",
+            "--worker",
+            "/private/tmp/tailtrace-v04-evidence/telemetry-memory-cpu/fixture-1000"
+          ],
+          "retain_steps": false,
+          "python_peak_bytes": 192584,
+          "process_peak_rss_bytes": 22151168,
+          "wall_ms": 125.2922079875134,
+          "retained_rows": 0,
+          "aggregates": {
+            "measured_steps": 1000,
+            "median_step_ms": 8.571428571428571,
+            "p95_step_ms": 15.0,
+            "tokens_per_second": 935.9383617736031,
+            "mean_padding_fraction": 0.19999999999999718,
+            "max_peak_memory_bytes": 0,
+            "workload_sha256": "e31ad48c3b38cf99215d0fe9e14669392c1da0e5c088051b3c81e272397e22c4"
+          }
+        },
+        {
+          "command": [
+            "/private/tmp/tailtrace-test-env/bin/python",
+            "-m",
+            "tailtrace.metrics_bench",
+            "--worker",
+            "/private/tmp/tailtrace-v04-evidence/telemetry-memory-cpu/fixture-1000",
+            "--retain-steps"
+          ],
+          "retain_steps": true,
+          "python_peak_bytes": 592769,
+          "process_peak_rss_bytes": 22724608,
+          "wall_ms": 132.5130420154892,
+          "retained_rows": 1000,
+          "aggregates": {
+            "measured_steps": 1000,
+            "median_step_ms": 8.571428571428571,
+            "p95_step_ms": 15.0,
+            "tokens_per_second": 935.9383617736031,
+            "mean_padding_fraction": 0.19999999999999718,
+            "max_peak_memory_bytes": 0,
+            "workload_sha256": "e31ad48c3b38cf99215d0fe9e14669392c1da0e5c088051b3c81e272397e22c4"
+          }
+        }
+      ],
+      "python_peak_ratio": 3.0779763635608357
+    },
+    {
+      "global_steps": 10000,
+      "rank_rows": 20000,
+      "input_bytes": 3806087,
+      "input_files": [
+        {
+          "path": "metrics-rank0.jsonl",
+          "bytes": 1903036,
+          "sha256": "943468d3160193e61c6c2a9385d94b95ad43e05408fdc4326d97a12e0612f29d"
+        },
+        {
+          "path": "metrics-rank1.jsonl",
+          "bytes": 1903051,
+          "sha256": "af6fc5685b0155691d9976c481e464a4aa85f7bdb7655453aec3d86cb1b106b7"
+        }
+      ],
+      "observations": [
+        {
+          "command": [
+            "/private/tmp/tailtrace-test-env/bin/python",
+            "-m",
+            "tailtrace.metrics_bench",
+            "--worker",
+            "/private/tmp/tailtrace-v04-evidence/telemetry-memory-cpu/fixture-10000"
+          ],
+          "retain_steps": false,
+          "python_peak_bytes": 193657,
+          "process_peak_rss_bytes": 22183936,
+          "wall_ms": 1392.7459589904174,
+          "retained_rows": 0,
+          "aggregates": {
+            "measured_steps": 10000,
+            "median_step_ms": 8.571428571428571,
+            "p95_step_ms": 15.0,
+            "tokens_per_second": 934.7994104086587,
+            "mean_padding_fraction": 0.20000000000003176,
+            "max_peak_memory_bytes": 0,
+            "workload_sha256": "b53d713a25f6721206e90cdd42c5764ddbb2d905e700cbeb346301c7bc475a2d"
+          }
+        },
+        {
+          "command": [
+            "/private/tmp/tailtrace-test-env/bin/python",
+            "-m",
+            "tailtrace.metrics_bench",
+            "--worker",
+            "/private/tmp/tailtrace-v04-evidence/telemetry-memory-cpu/fixture-10000",
+            "--retain-steps"
+          ],
+          "retain_steps": true,
+          "python_peak_bytes": 4664603,
+          "process_peak_rss_bytes": 28590080,
+          "wall_ms": 1461.0041250125505,
+          "retained_rows": 10000,
+          "aggregates": {
+            "measured_steps": 10000,
+            "median_step_ms": 8.571428571428571,
+            "p95_step_ms": 15.0,
+            "tokens_per_second": 934.7994104086587,
+            "mean_padding_fraction": 0.20000000000003176,
+            "max_peak_memory_bytes": 0,
+            "workload_sha256": "b53d713a25f6721206e90cdd42c5764ddbb2d905e700cbeb346301c7bc475a2d"
+          }
+        }
+      ],
+      "python_peak_ratio": 24.086932049964627
+    },
+    {
+      "global_steps": 50000,
+      "rank_rows": 100000,
+      "input_bytes": 19119370,
+      "input_files": [
+        {
+          "path": "metrics-rank0.jsonl",
+          "bytes": 9559678,
+          "sha256": "99d6deaca425f37d108869bef9c27b27341031eb37cec8c4e7495dbab4da9748"
+        },
+        {
+          "path": "metrics-rank1.jsonl",
+          "bytes": 9559692,
+          "sha256": "b45737da6d6ac02a370aa85494e2d4c7b0c1f5999fab860798cb3d27ba144d42"
+        }
+      ],
+      "observations": [
+        {
+          "command": [
+            "/private/tmp/tailtrace-test-env/bin/python",
+            "-m",
+            "tailtrace.metrics_bench",
+            "--worker",
+            "/private/tmp/tailtrace-v04-evidence/telemetry-memory-cpu/fixture-50000"
+          ],
+          "retain_steps": false,
+          "python_peak_bytes": 193675,
+          "process_peak_rss_bytes": 22265856,
+          "wall_ms": 6227.803625050001,
+          "retained_rows": 0,
+          "aggregates": {
+            "measured_steps": 50000,
+            "median_step_ms": 8.571428571428571,
+            "p95_step_ms": 15.0,
+            "tokens_per_second": 934.7463582448747,
+            "mean_padding_fraction": 0.20000000000002635,
+            "max_peak_memory_bytes": 0,
+            "workload_sha256": "89afc79f682ab1380ecadc0ae8f045aac8a6a547b1c2ee5145d755d939fbcd31"
+          }
+        },
+        {
+          "command": [
+            "/private/tmp/tailtrace-test-env/bin/python",
+            "-m",
+            "tailtrace.metrics_bench",
+            "--worker",
+            "/private/tmp/tailtrace-v04-evidence/telemetry-memory-cpu/fixture-50000",
+            "--retain-steps"
+          ],
+          "retain_steps": true,
+          "python_peak_bytes": 22819915,
+          "process_peak_rss_bytes": 56393728,
+          "wall_ms": 6568.938041047659,
+          "retained_rows": 50000,
+          "aggregates": {
+            "measured_steps": 50000,
+            "median_step_ms": 8.571428571428571,
+            "p95_step_ms": 15.0,
+            "tokens_per_second": 934.7463582448747,
+            "mean_padding_fraction": 0.20000000000002635,
+            "max_peak_memory_bytes": 0,
+            "workload_sha256": "89afc79f682ab1380ecadc0ae8f045aac8a6a547b1c2ee5145d755d939fbcd31"
+          }
+        }
+      ],
+      "python_peak_ratio": 117.82581644507552
+    }
+  ],
+  "limitations": [
+    "Generated metric rows are not observed training or GPU performance.",
+    "tracemalloc measures Python allocations, excluding SQLite C allocations and OS cache.",
+    "Process peak RSS includes interpreter imports and SQLite, measured in fresh subprocesses.",
+    "Aggregate mode uses disk space proportional to steps and a 1 MiB SQLite cache target.",
+    "Retained mode intentionally stores per-step rows for offline inspection.",
+    "Single observations characterize memory growth, not latency speedup or a universal RAM bound."
+  ]
+}
