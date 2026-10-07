@@ -1,0 +1,12 @@
+CUDA launches work on streams.
+Ranks share a global batch.
+Unequal local sample counts require a global valid-token denominator.
+DDP averages gradients.
+Capacity limits are declared assumptions; measured memory must be checked separately.
+An atomic completion marker distinguishes a committed checkpoint from an incomplete save.
+AdamW recovery includes momentum, variance, and optimizer step counters.
+A long collective can mean another rank arrived late, even when the network is healthy.
+Keep sample identities stable when changing rank ownership inside a global batch.
+Measure planner overhead.
+An oracle proves optimality only after its bounded search completes.
+Real measurements and declared cost estimates answer different questions.

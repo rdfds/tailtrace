@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "evidence": "observed",
+  "run": "/private/tmp/tailtrace-integration/results/recovery-cpu/whole",
+  "world_size": 2,
+  "timing": "cpu_wall",
+  "instrumented": false,
+  "measured_steps": 6,
+  "median_step_ms": 26.489896001294255,
+  "p95_step_ms": 110.78486451879144,
+  "tokens_per_second": 5973.759315684386,
+  "mean_padding_fraction": 0.08846408645356972,
+  "max_peak_memory_bytes": 0,
+  "steps": [
+    {
+      "step": 0,
+      "step_ms": 137.02437502797693,
+      "tokens": 190,
+      "loss": 5.730754330283717,
+      "rank_spread_ms": 0.2507910248823464,
+      "proxy_imbalance": 1.6820349761526232,
+      "padding_fraction": 0.04040404040404044
+    },
+    {
+      "step": 1,
+      "step_ms": 12.994165997952223,
+      "tokens": 212,
+      "loss": 5.606982537035672,
+      "rank_spread_ms": 0.06554101128131151,
+      "proxy_imbalance": 1.824295010845987,
+      "padding_fraction": 0.07017543859649122
+    },
+    {
+      "step": 2,
+      "step_ms": 9.002749982755631,
+      "tokens": 327,
+      "loss": 5.628520440617833,
+      "rank_spread_ms": 0.08970900671556592,
+      "proxy_imbalance": 1.0939096809832896,
+      "padding_fraction": 0.038235294117647034
+    },
+    {
+      "step": 3,
+      "step_ms": 24.814250005874783,
+      "tokens": 260,
+      "loss": 5.593680279071514,
+      "rank_spread_ms": 14.509875036310405,
+      "proxy_imbalance": 1.1644773954387944,
+      "padding_fraction": 0.1719745222929936
+    },
+    {
+      "step": 4,
+      "step_ms": 28.165541996713728,
+      "tokens": 197,
+      "loss": 5.578748983780139,
+      "rank_spread_ms": 16.09841699246317,
+      "proxy_imbalance": 1.8260506540495407,
+      "padding_fraction": 0.07075471698113212
+    },
+    {
+      "step": 5,
+      "step_ms": 32.06633299123496,
+      "tokens": 272,
+      "loss": 5.649022495045381,
+      "rank_spread_ms": 0.4681249847635627,
+      "proxy_imbalance": 1.2491720548809335,
+      "padding_fraction": 0.1392405063291139
+    }
+  ],
+  "limitations": [
+    "Step latency is max rank-local duration, not a clock-aligned global critical path.",
+    "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
+    "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
+  ]
+}

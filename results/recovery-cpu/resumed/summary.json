@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "evidence": "observed",
+  "run": "/private/tmp/tailtrace-integration/results/recovery-cpu/resumed",
+  "world_size": 2,
+  "timing": "cpu_wall",
+  "instrumented": false,
+  "measured_steps": 4,
+  "median_step_ms": 6.0747079842258245,
+  "p95_step_ms": 6.601040184614249,
+  "tokens_per_second": 42904.15636305537,
+  "mean_padding_fraction": 0.10505125993022166,
+  "max_peak_memory_bytes": 0,
+  "steps": [
+    {
+      "step": 2,
+      "step_ms": 6.65345904417336,
+      "tokens": 327,
+      "loss": 5.628520440617833,
+      "rank_spread_ms": 0.23258407600224018,
+      "proxy_imbalance": 1.0939096809832896,
+      "padding_fraction": 0.038235294117647034
+    },
+    {
+      "step": 3,
+      "step_ms": 5.845415988005698,
+      "tokens": 260,
+      "loss": 5.593680279071514,
+      "rank_spread_ms": 0.2193329855799675,
+      "proxy_imbalance": 1.1644773954387944,
+      "padding_fraction": 0.1719745222929936
+    },
+    {
+      "step": 4,
+      "step_ms": 5.810124974232167,
+      "tokens": 197,
+      "loss": 5.578748983780139,
+      "rank_spread_ms": 0.5128749762661755,
+      "proxy_imbalance": 1.8260506540495407,
+      "padding_fraction": 0.07075471698113212
+    },
+    {
+      "step": 5,
+      "step_ms": 6.303999980445951,
+      "tokens": 272,
+      "loss": 5.649022495045381,
+      "rank_spread_ms": 0.567207986023277,
+      "proxy_imbalance": 1.2491720548809335,
+      "padding_fraction": 0.1392405063291139
+    }
+  ],
+  "limitations": [
+    "Step latency is max rank-local duration, not a clock-aligned global critical path.",
+    "Throughput excludes warmup, checkpoint I/O, and post-run collection; wall time is in manifest.",
+    "Byte-corpus training exercises systems behavior; loss is not a language quality benchmark."
+  ]
+}

@@ -1,0 +1,52 @@
+W1006 21:46:31.848000 56642 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+W1006 21:46:38.926000 56645 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+W1006 21:46:38.926000 56646 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+/tmp/tailtrace-runtime/torch/distributed/checkpoint/filesystem.py:131: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  if tensor.storage().size() != tensor.numel():
+/tmp/tailtrace-runtime/torch/distributed/checkpoint/filesystem.py:131: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  if tensor.storage().size() != tensor.numel():
+TAILTRACE_INJECTED_EXIT rank=1 code=86
+W1006 21:46:39.985000 56642 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/api.py:900] Sending process 56645 closing signal SIGTERM
+E1006 21:46:40.031000 56642 /private/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 86) local_rank: 1 (pid: 56646) of binary: /private/tmp/tailtrace-test-env/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/tmp/tailtrace-runtime/torch/distributed/run.py", line 905, in <module>
+    main()
+    ~~~~^^
+  File "/tmp/tailtrace-runtime/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 357, in wrapper
+    return f(*args, **kwargs)
+  File "/tmp/tailtrace-runtime/torch/distributed/run.py", line 901, in main
+    run(args)
+    ~~~^^^^^^
+  File "/tmp/tailtrace-runtime/torch/distributed/run.py", line 892, in run
+    elastic_launch(
+    ~~~~~~~~~~~~~~~
+        config=config,
+        ~~~~~~~~~~~~~~
+        entrypoint=cmd,
+        ~~~~~~~~~~~~~~~
+    )(*cmd_args)
+    ~^^^^^^^^^^^
+  File "/tmp/tailtrace-runtime/torch/distributed/launcher/api.py", line 143, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/tmp/tailtrace-runtime/torch/distributed/launcher/api.py", line 277, in launch_agent
+    raise ChildFailedError(
+    ...<2 lines>...
+    )
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+tailtrace.recovery FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-10-06_21:46:39
+  host      : 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa
+  rank      : 1 (local_rank: 1)
+  exitcode  : 86 (pid: 56646)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "evidence": "observed_cpu",
+  "scope": "two_rank_process_recovery",
+  "world_size": 2,
+  "physical_hosts": 1,
+  "fault_rank": 1,
+  "fault_step": 2,
+  "fault": "os._exit(86) after committed distributed checkpoint",
+  "final_step": 6,
+  "dataset_sha256": "ec3974fe68e78cffcf1d2ab53856bf323f684ee6fc7cf05eb8f5e53bac12c3b7",
+  "hardware": {
+    "created_utc": "2026-10-07T01:46:52.973374+00:00",
+    "python": "3.13.0",
+    "platform": "macOS-15.3-arm64-arm-64bit-Mach-O",
+    "git_commit": "f737496215b785c9f7a8feb127239740224ee0a0",
+    "git_dirty": true,
+    "hostname": "Rs-MacBook-Pro-2.local",
+    "source_sha256": "0692d973e4a5e44683ab2884aff24757cdb3af9ef681da389927ba8ccdb4c6ff"
+  },
+  "runs": {
+    "uninterrupted": {
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=1",
+        "--nproc-per-node=2",
+        "--master-addr=127.0.0.1",
+        "--master-port=52883",
+        "-m",
+        "tailtrace.recovery",
+        "--config",
+        "/private/tmp/tailtrace-integration/results/recovery-cpu/whole-config.json",
+        "--out",
+        "/private/tmp/tailtrace-integration/results/recovery-cpu/whole"
+      ],
+      "returncode": 0,
+      "log": "whole.log"
+    },
+    "crashed": {
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=1",
+        "--nproc-per-node=2",
+        "--master-addr=127.0.0.1",
+        "--master-port=52897",
+        "-m",
+        "tailtrace.recovery",
+        "--config",
+        "/private/tmp/tailtrace-integration/results/recovery-cpu/crash-config.json",
+        "--out",
+        "/private/tmp/tailtrace-integration/results/recovery-cpu/crashed",
+        "--fault-step",
+        "2"
+      ],
+      "returncode": 1,
+      "log": "crash.log"
+    },
+    "resumed": {
+      "command": [
+        "/private/tmp/tailtrace-test-env/bin/python",
+        "-m",
+        "torch.distributed.run",
+        "--nnodes=1",
+        "--nproc-per-node=2",
+        "--master-addr=127.0.0.1",
+        "--master-port=52909",
+        "-m",
+        "tailtrace.recovery",
+        "--config",
+        "/private/tmp/tailtrace-integration/results/recovery-cpu/whole-config.json",
+        "--out",
+        "/private/tmp/tailtrace-integration/results/recovery-cpu/resumed",
+        "--resume",
+        "/private/tmp/tailtrace-integration/results/recovery-cpu/crashed/checkpoint-2"
+      ],
+      "returncode": 0,
+      "log": "resume.log"
+    }
+  },
+  "comparison": {
+    "bitwise_equal": true,
+    "tensor_count": 36,
+    "tensor_elements": 40041,
+    "max_tensor_error": 0.0,
+    "canonical_state_sha256": "148c81af5c8c2957e5c5da6787b1334d1db7d671bab7f2b6a775b3dd2a0e4f86"
+  },
+  "limitations": [
+    "same world size",
+    "process failure after completed save",
+    "no mid-write, machine-loss, network-partition, or GPU recovery claim"
+  ]
+}
